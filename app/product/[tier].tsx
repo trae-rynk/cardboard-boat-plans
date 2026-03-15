@@ -1,0 +1,312 @@
+import { ScrollView, Text, View, Pressable, StyleSheet } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScreenContainer } from '@/components/screen-container';
+import { ImagePlaceholder } from '@/components/image-placeholder';
+import { VideoPlaceholder } from '@/components/video-placeholder';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useColors } from '@/hooks/use-colors';
+import { PRODUCTS, type ProductTier } from '@/constants/products';
+
+export default function ProductDetailScreen() {
+  const { tier } = useLocalSearchParams<{ tier: string }>();
+  const router = useRouter();
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+
+  const product = PRODUCTS[(tier as ProductTier) ?? 'basic'];
+  const accentColor = tier === 'premium' ? colors.accent : colors.primary;
+
+  if (!product) {
+    return (
+      <ScreenContainer className="items-center justify-center">
+        <Text style={{ color: colors.muted }}>Product not found</Text>
+      </ScreenContainer>
+    );
+  }
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* Back button overlay */}
+      <Pressable
+        style={[styles.backButton, { top: insets.top + 12, backgroundColor: colors.surface + 'EE' }]}
+        onPress={() => router.back()}
+      >
+        <IconSymbol name="chevron.left" size={20} color={colors.foreground} />
+      </Pressable>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
+      >
+        {/* Hero Image */}
+        <ImagePlaceholder
+          height={260}
+          label="Product Hero Image"
+          iconSize={40}
+          style={{ borderRadius: 0, borderWidth: 0, borderBottomWidth: 2 }}
+        />
+
+        {/* Product Header */}
+        <View style={[styles.productHeader, { backgroundColor: colors.surface }]}>
+          {product.badge && (
+            <View style={[styles.badge, { backgroundColor: accentColor }]}>
+              <Text style={styles.badgeText}>⭐ {product.badge}</Text>
+            </View>
+          )}
+          <Text style={[styles.productName, { color: colors.foreground }]}>{product.name}</Text>
+          <Text style={[styles.productPrice, { color: accentColor }]}>{product.priceDisplay}</Text>
+          <Text style={[styles.productDescription, { color: colors.muted }]}>
+            {product.description}
+          </Text>
+        </View>
+
+        {/* What's Included */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>What's Included</Text>
+          <View style={[styles.featureCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {product.features
+              .filter((f) => f.included)
+              .map((feature, index) => (
+                <View key={index} style={styles.featureRow}>
+                  <IconSymbol name="checkmark.circle.fill" size={18} color={colors.success} />
+                  <Text style={[styles.featureText, { color: colors.foreground }]}>
+                    {feature.text}
+                  </Text>
+                </View>
+              ))}
+          </View>
+        </View>
+
+        {/* Photo Gallery */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Gallery</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
+            {[1, 2, 3].map((i) => (
+              <ImagePlaceholder
+                key={i}
+                width={160}
+                height={120}
+                label={`Photo ${i}`}
+                iconSize={20}
+                style={{ marginRight: 12, borderRadius: 10 }}
+              />
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Video Preview (Premium only) */}
+        {tier === 'premium' && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+              Video Tutorial Preview
+            </Text>
+            <VideoPlaceholder
+              height={200}
+              label="Add Video Tutorial Preview"
+            />
+            <Text style={[styles.videoNote, { color: colors.muted }]}>
+              Full video series (6 videos) unlocked after purchase
+            </Text>
+          </View>
+        )}
+
+        {/* Additional Images */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Build Examples</Text>
+          <ImagePlaceholder
+            height={180}
+            label="Finished Boat Example Photo"
+            iconSize={28}
+          />
+          <View style={{ height: 12 }} />
+          <ImagePlaceholder
+            height={180}
+            label="Race Day Action Photo"
+            iconSize={28}
+          />
+        </View>
+
+        {/* Guarantee */}
+        <View style={[styles.guaranteeBox, { backgroundColor: colors.success + '12', borderColor: colors.success + '44' }]}>
+          <IconSymbol name="checkmark.seal.fill" size={24} color={colors.success} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.guaranteeTitle, { color: colors.foreground }]}>
+              30-Day Money-Back Guarantee
+            </Text>
+            <Text style={[styles.guaranteeBody, { color: colors.muted }]}>
+              Not satisfied? We'll refund your purchase, no questions asked.
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Sticky Bottom CTA */}
+      <View
+        style={[
+          styles.stickyBottom,
+          {
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
+            paddingBottom: insets.bottom + 12,
+          },
+        ]}
+      >
+        <View style={styles.stickyPriceRow}>
+          <View>
+            <Text style={[styles.stickyLabel, { color: colors.muted }]}>One-time purchase</Text>
+            <Text style={[styles.stickyPrice, { color: accentColor }]}>{product.priceDisplay}</Text>
+          </View>
+          <Pressable
+            style={({ pressed }) => [
+              styles.buyButton,
+              { backgroundColor: accentColor },
+              pressed && { opacity: 0.85 },
+            ]}
+            onPress={() =>
+              router.push({ pathname: '/checkout', params: { tier: product.id } } as any)
+            }
+          >
+            <IconSymbol name="lock.fill" size={16} color="#FFFFFF" />
+            <Text style={styles.buyButtonText}>Buy Now</Text>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  backButton: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 100,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  productHeader: {
+    padding: 20,
+    gap: 8,
+  },
+  badge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  productName: {
+    fontSize: 24,
+    fontWeight: '800',
+    lineHeight: 30,
+  },
+  productPrice: {
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  productDescription: {
+    fontSize: 15,
+    lineHeight: 23,
+    marginTop: 4,
+  },
+  section: {
+    padding: 20,
+    paddingTop: 0,
+    marginTop: 20,
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  featureCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    gap: 12,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  featureText: {
+    fontSize: 14,
+    lineHeight: 20,
+    flex: 1,
+  },
+  galleryScroll: {
+    marginLeft: -4,
+  },
+  videoNote: {
+    fontSize: 13,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  guaranteeBox: {
+    margin: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  guaranteeTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  guaranteeBody: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  stickyBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopWidth: 1,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  stickyPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  stickyLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  stickyPrice: {
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  buyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  buyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+});

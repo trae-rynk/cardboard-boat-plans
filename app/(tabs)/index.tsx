@@ -1,48 +1,397 @@
-import { ScrollView, Text, View, TouchableOpacity } from "react-native";
+import { ScrollView, Text, View, Pressable, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { ScreenContainer } from '@/components/screen-container';
+import { ImagePlaceholder } from '@/components/image-placeholder';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useColors } from '@/hooks/use-colors';
+import { PRODUCTS, TESTIMONIALS } from '@/constants/products';
 
-import { ScreenContainer } from "@/components/screen-container";
-
-/**
- * Home Screen - NativeWind Example
- *
- * This template uses NativeWind (Tailwind CSS for React Native).
- * You can use familiar Tailwind classes directly in className props.
- *
- * Key patterns:
- * - Use `className` instead of `style` for most styling
- * - Theme colors: use tokens directly (bg-background, text-foreground, bg-primary, etc.); no dark: prefix needed
- * - Responsive: standard Tailwind breakpoints work on web
- * - Custom colors defined in tailwind.config.js
- */
 export default function HomeScreen() {
+  const colors = useColors();
+  const router = useRouter();
+
   return (
-    <ScreenContainer className="p-6">
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View className="flex-1 gap-8">
-          {/* Hero Section */}
-          <View className="items-center gap-2">
-            <Text className="text-4xl font-bold text-foreground">Welcome</Text>
-            <Text className="text-base text-muted text-center">
-              Edit app/(tabs)/index.tsx to get started
-            </Text>
-          </View>
-
-          {/* Example Card */}
-          <View className="w-full max-w-sm self-center bg-surface rounded-2xl p-6 shadow-sm border border-border">
-            <Text className="text-lg font-semibold text-foreground mb-2">NativeWind Ready</Text>
-            <Text className="text-sm text-muted leading-relaxed">
-              Use Tailwind CSS classes directly in your React Native components.
-            </Text>
-          </View>
-
-          {/* Example Button */}
-          <View className="items-center">
-            <TouchableOpacity className="bg-primary px-6 py-3 rounded-full active:opacity-80">
-              <Text className="text-background font-semibold">Get Started</Text>
-            </TouchableOpacity>
-          </View>
+    <ScreenContainer edges={['top', 'left', 'right']}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 32 }}
+      >
+        {/* Header */}
+        <View style={[styles.header, { backgroundColor: colors.primary }]}>
+          <Text style={styles.headerTitle}>Cardboard Boat Builder</Text>
+          <Text style={styles.headerSubtitle}>Award-Winning Plans & Techniques</Text>
         </View>
+
+        {/* Hero Image */}
+        <ImagePlaceholder
+          height={220}
+          label="Hero Photo — Cardboard Boat Race"
+          iconSize={36}
+          style={{ borderRadius: 0, borderWidth: 0, borderBottomWidth: 2 }}
+        />
+
+        {/* Tagline Section */}
+        <View style={[styles.taglineSection, { backgroundColor: colors.surface }]}>
+          <View style={[styles.badge, { backgroundColor: colors.accent + '22' }]}>
+            <IconSymbol name="trophy.fill" size={14} color={colors.accent} />
+            <Text style={[styles.badgeText, { color: colors.accent }]}>
+              Competition-Tested Plans
+            </Text>
+          </View>
+          <Text style={[styles.taglineHeading, { color: colors.foreground }]}>
+            Build an Award-Winning{'\n'}Cardboard Boat
+          </Text>
+          <Text style={[styles.taglineBody, { color: colors.muted }]}>
+            Whether you're a first-time builder or a seasoned regatta competitor, our
+            detailed plans give you everything you need to design, build, and race a
+            championship-caliber cardboard boat.
+          </Text>
+        </View>
+
+        {/* Product Cards */}
+        <View style={styles.sectionContainer}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+            Choose Your Package
+          </Text>
+
+          {/* Basic Card */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.productCard,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+              pressed && { opacity: 0.85 },
+            ]}
+           onPress={() => router.push({ pathname: '/product/[tier]', params: { tier: 'basic' } })}
+          >
+            <ImagePlaceholder height={140} label="Boat Plans Preview Image" iconSize={24} />
+            <View style={styles.productCardBody}>
+              <Text style={[styles.productName, { color: colors.foreground }]}>
+                {PRODUCTS.basic.name}
+              </Text>
+              <Text style={[styles.productTagline, { color: colors.muted }]}>
+                {PRODUCTS.basic.tagline}
+              </Text>
+              <View style={styles.productCardFooter}>
+                <Text style={[styles.productPrice, { color: colors.primary }]}>
+                  {PRODUCTS.basic.priceDisplay}
+                </Text>
+                <View style={[styles.viewBtn, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.viewBtnText}>View Details</Text>
+                </View>
+              </View>
+            </View>
+          </Pressable>
+
+          {/* Premium Card */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.productCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.accent,
+                borderWidth: 2,
+              },
+              pressed && { opacity: 0.85 },
+            ]}
+           onPress={() => router.push({ pathname: '/product/[tier]', params: { tier: 'premium' } })}
+          >
+            <View style={[styles.bestValueBadge, { backgroundColor: colors.accent }]}>
+              <Text style={styles.bestValueText}>⭐ Best Value</Text>
+            </View>
+            <ImagePlaceholder height={140} label="Premium Package Preview Image" iconSize={24} />
+            <View style={styles.productCardBody}>
+              <Text style={[styles.productName, { color: colors.foreground }]}>
+                {PRODUCTS.premium.name}
+              </Text>
+              <Text style={[styles.productTagline, { color: colors.muted }]}>
+                {PRODUCTS.premium.tagline}
+              </Text>
+              <View style={styles.productCardFooter}>
+                <Text style={[styles.productPrice, { color: colors.accent }]}>
+                  {PRODUCTS.premium.priceDisplay}
+                </Text>
+                <View style={[styles.viewBtn, { backgroundColor: colors.accent }]}>
+                  <Text style={styles.viewBtnText}>View Details</Text>
+                </View>
+              </View>
+            </View>
+          </Pressable>
+        </View>
+
+        {/* How It Works */}
+        <View style={[styles.howItWorksSection, { backgroundColor: colors.primary + '0F' }]}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+            How It Works
+          </Text>
+          {HOW_IT_WORKS.map((step, index) => (
+            <View key={index} style={styles.howItWorksStep}>
+              <View style={[styles.stepNumber, { backgroundColor: colors.primary }]}>
+                <Text style={styles.stepNumberText}>{index + 1}</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={[styles.stepTitle, { color: colors.foreground }]}>
+                  {step.title}
+                </Text>
+                <Text style={[styles.stepBody, { color: colors.muted }]}>
+                  {step.body}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Testimonials */}
+        <View style={styles.sectionContainer}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+            What Builders Say
+          </Text>
+          {TESTIMONIALS.map((t) => (
+            <View
+              key={t.id}
+              style={[styles.testimonialCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            >
+              <View style={styles.stars}>
+                {Array.from({ length: t.rating }).map((_, i) => (
+                  <IconSymbol key={i} name="star.fill" size={14} color={colors.accent} />
+                ))}
+              </View>
+              <Text style={[styles.testimonialText, { color: colors.foreground }]}>
+                "{t.text}"
+              </Text>
+              <Text style={[styles.testimonialAuthor, { color: colors.muted }]}>
+                — {t.name}, {t.location}
+              </Text>
+            </View>
+          ))}
+        </View>
+
+        {/* CTA Banner */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.ctaBanner,
+            { backgroundColor: colors.primary },
+            pressed && { opacity: 0.9 },
+          ]}
+          onPress={() => router.push('/(tabs)/packages')}
+        >
+          <Text style={styles.ctaBannerTitle}>Ready to Build?</Text>
+          <Text style={styles.ctaBannerSubtitle}>View all packages and get started today</Text>
+          <View style={[styles.ctaButton, { backgroundColor: colors.accent }]}>
+            <Text style={styles.ctaButtonText}>See Packages →</Text>
+          </View>
+        </Pressable>
       </ScrollView>
     </ScreenContainer>
   );
 }
+
+const HOW_IT_WORKS = [
+  {
+    title: 'Choose Your Package',
+    body: 'Select the Basic or Premium package based on your experience level and goals.',
+  },
+  {
+    title: 'Download Instantly',
+    body: 'After purchase, your plans are available for immediate download to your device.',
+  },
+  {
+    title: 'Build & Compete',
+    body: 'Follow the step-by-step plans to build your boat and dominate the regatta.',
+  },
+];
+
+const styles = StyleSheet.create({
+  header: {
+    paddingTop: 16,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  taglineSection: {
+    padding: 24,
+    alignItems: 'center',
+    gap: 12,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  taglineHeading: {
+    fontSize: 28,
+    fontWeight: '800',
+    textAlign: 'center',
+    lineHeight: 36,
+  },
+  taglineBody: {
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  sectionContainer: {
+    padding: 20,
+    gap: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  productCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  bestValueBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  bestValueText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  productCardBody: {
+    padding: 16,
+    gap: 6,
+  },
+  productName: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  productTagline: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  productCardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  productPrice: {
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  viewBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  viewBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  howItWorksSection: {
+    padding: 20,
+    gap: 16,
+  },
+  howItWorksStep: {
+    flexDirection: 'row',
+    gap: 16,
+    alignItems: 'flex-start',
+  },
+  stepNumber: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  stepNumberText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  stepContent: {
+    flex: 1,
+    gap: 4,
+  },
+  stepTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  stepBody: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  testimonialCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    gap: 8,
+  },
+  stars: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  testimonialText: {
+    fontSize: 14,
+    lineHeight: 21,
+    fontStyle: 'italic',
+  },
+  testimonialAuthor: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  ctaBanner: {
+    margin: 20,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    gap: 8,
+  },
+  ctaBannerTitle: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  ctaBannerSubtitle: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  ctaButton: {
+    marginTop: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  ctaButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+});

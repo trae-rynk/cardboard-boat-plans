@@ -18,7 +18,31 @@ const MAPPING = {
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
-} as IconMapping;
+  "chevron.left": "chevron-left",
+  "tag.fill": "local-offer",
+  "arrow.down.circle.fill": "download",
+  "checkmark.circle.fill": "check-circle",
+  "xmark.circle.fill": "cancel",
+  "star.fill": "star",
+  "lock.fill": "lock",
+  "creditcard.fill": "credit-card",
+  "doc.fill": "description",
+  "play.circle.fill": "play-circle-filled",
+  "arrow.down.to.line": "save-alt",
+  "checkmark.seal.fill": "verified",
+  "exclamationmark.circle.fill": "error",
+  "info.circle.fill": "info",
+  "person.fill": "person",
+  "cart.fill": "shopping-cart",
+  "gift.fill": "card-giftcard",
+  "trophy.fill": "emoji-events",
+  "boat.fill": "directions-boat",
+  "photo.fill": "photo",
+  "video.fill": "videocam",
+  "repeat": "repeat",
+  "clock.fill": "access-time",
+  "envelope.fill": "email",
+} as unknown as IconMapping;
 
 /**
  * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.
