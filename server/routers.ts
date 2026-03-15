@@ -144,6 +144,120 @@ export const appRouter = router({
       }),
   }),
 
+  // ─── Reviews ──────────────────────────────────────────────────────────────
+  reviews: router({
+    /**
+     * Submit a new review (or update an existing one).
+     * Only verified purchasers (paid orders) can submit.
+     */
+    submit: protectedProcedure
+      .input(
+        z.object({
+          productTier: z.enum(["basic", "premium"]),
+          rating: z.number().int().min(1).max(5),
+          title: z.string().max(120).optional(),
+          body: z.string().max(2000).optional(),
+          displayName: z.string().max(100).optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        // Verified purchase gate
+        const hasPurchase = await db.hasVerifiedPurchase(ctx.user.id, input.productTier);
+        if (!hasPurchase) {
+          throw new Error("You must purchase this product before leaving a review.");
+        }
+
+        const existing = await db.getReviewByUserAndProduct(ctx.user.id, input.productTier);
+
+        if (existing) {
+          // Update existing review
+          await db.updateReview(existing.id, ctx.user.id, {
+            rating: input.rating,
+            title: input.title ?? null,
+            body: input.body ?? null,
+            displayName: input.displayName ?? ctx.user.name ?? null,
+          });
+          return { reviewId: existing.id, action: "updated" as const };
+        } else {
+          // Find a qualifying paid order
+          const userOrders = await db.getOrdersByUserId(ctx.user.id);
+          const qualifyingOrder = userOrders.find(
+            (o) => o.productTier === input.productTier && o.status === "paid"
+          );
+          if (!qualifyingOrder) throw new Error("No qualifying order found.");
+
+          const reviewId = await db.createReview({
+            userId: ctx.user.id,
+            orderId: qualifyingOrder.id,
+            productTier: input.productTier,
+            rating: input.rating,
+            title: input.title ?? null,
+            body: input.body ?? null,
+            displayName: input.displayName ?? ctx.user.name ?? null,
+          });
+          return { reviewId, action: "created" as const };
+        }
+      }),
+
+    /**
+     * Delete the current user's review for a product.
+     */
+    delete: protectedProcedure
+      .input(z.object({ reviewId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteReview(input.reviewId, ctx.user.id);
+        return { success: true };
+      }),
+
+    /**
+     * List published reviews for a product tier (public).
+     */
+    list: publicProcedure
+      .input(
+        z.object({
+          productTier: z.enum(["basic", "premium"]),
+          limit: z.number().int().min(1).max(50).default(10),
+          offset: z.number().int().min(0).default(0),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getReviewsByProductTier(input.productTier, input.limit, input.offset);
+      }),
+
+    /**
+     * Get rating stats (average, count, distribution) for a product tier.
+     */
+    stats: publicProcedure
+      .input(z.object({ productTier: z.enum(["basic", "premium"]) }))
+      .query(async ({ input }) => {
+        return db.getRatingStats(input.productTier);
+      }),
+
+    /**
+     * Get the current user's own review for a product (if any).
+     */
+    myReview: protectedProcedure
+      .input(z.object({ productTier: z.enum(["basic", "premium"]) }))
+      .query(async ({ ctx, input }) => {
+        return db.getReviewByUserAndProduct(ctx.user.id, input.productTier);
+      }),
+
+    /**
+     * Check if the current user can review a product (verified purchase gate).
+     */
+    canReview: protectedProcedure
+      .input(z.object({ productTier: z.enum(["basic", "premium"]) }))
+      .query(async ({ ctx, input }) => {
+        const hasPurchase = await db.hasVerifiedPurchase(ctx.user.id, input.productTier);
+        const existingReview = await db.getReviewByUserAndProduct(ctx.user.id, input.productTier);
+        return {
+          canReview: hasPurchase,
+          hasReview: !!existingReview,
+          reviewId: existingReview?.id ?? null,
+        };
+      }),
+  }),
+
   // ─── Downloads ─────────────────────────────────────────────────────────────
   downloads: router({
     /**

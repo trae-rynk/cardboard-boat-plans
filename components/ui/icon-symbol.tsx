@@ -42,6 +42,10 @@ const MAPPING = {
   "repeat": "repeat",
   "clock.fill": "access-time",
   "envelope.fill": "email",
+  "pencil": "edit",
+  "trash.fill": "delete",
+  "xmark": "close",
+  "star": "star-border",
 } as unknown as IconMapping;
 
 /**

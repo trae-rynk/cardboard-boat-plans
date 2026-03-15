@@ -68,3 +68,23 @@
 - [x] Error states and toast notifications
 - [x] Haptic feedback on key actions
 - [ ] Smooth transitions between screens
+
+## Reviews & Ratings Feature
+- [x] Add reviews table to drizzle schema
+- [x] Run database migration for reviews table
+- [x] Create tRPC API: submit review (verified purchasers only)
+- [x] Create tRPC API: list reviews by product tier (public)
+- [x] Create tRPC API: get user's own review for a product
+- [x] Create tRPC API: delete/edit own review
+- [x] Build StarRatingPicker component (interactive 1–5 stars)
+- [x] Build StarRatingDisplay component (read-only stars)
+- [x] Build ReviewCard component (avatar, name, stars, date, text)
+- [x] Build ReviewsList component (sorted by date, paginated)
+- [x] Build WriteReview screen/modal (star picker + text input + submit)
+- [x] Add "Write a Review" button in My Downloads (verified purchasers only)
+- [x] Integrate ReviewsList into Product Detail screen
+- [x] Integrate average rating + count into Product Detail header
+- [x] Integrate average rating + count into Packages screen cards
+- [x] Show "Verified Purchase" badge on reviews from real buyers
+- [x] Handle duplicate review prevention (one per user per product)
+- [x] Add review count to Home screen product cards

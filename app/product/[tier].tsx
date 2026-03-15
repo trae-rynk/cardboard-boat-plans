@@ -7,6 +7,9 @@ import { VideoPlaceholder } from '@/components/video-placeholder';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/hooks/use-colors';
 import { PRODUCTS, type ProductTier } from '@/constants/products';
+import { ReviewsSection } from '@/components/reviews-list';
+import { StarRatingDisplay } from '@/components/star-rating';
+import { trpc } from '@/lib/trpc';
 
 export default function ProductDetailScreen() {
   const { tier } = useLocalSearchParams<{ tier: string }>();
@@ -16,6 +19,10 @@ export default function ProductDetailScreen() {
 
   const product = PRODUCTS[(tier as ProductTier) ?? 'basic'];
   const accentColor = tier === 'premium' ? colors.accent : colors.primary;
+
+  const { data: ratingStats } = trpc.reviews.stats.useQuery(
+    { productTier: (tier as ProductTier) ?? 'basic' },
+  );
 
   if (!product) {
     return (
@@ -56,6 +63,14 @@ export default function ProductDetailScreen() {
           )}
           <Text style={[styles.productName, { color: colors.foreground }]}>{product.name}</Text>
           <Text style={[styles.productPrice, { color: accentColor }]}>{product.priceDisplay}</Text>
+          {ratingStats && ratingStats.totalReviews > 0 && (
+            <StarRatingDisplay
+              rating={ratingStats.averageRating}
+              size={15}
+              showNumber
+              reviewCount={ratingStats.totalReviews}
+            />
+          )}
           <Text style={[styles.productDescription, { color: colors.muted }]}>
             {product.description}
           </Text>
@@ -124,6 +139,14 @@ export default function ProductDetailScreen() {
             height={180}
             label="Race Day Action Photo"
             iconSize={28}
+          />
+        </View>
+
+        {/* Reviews Section */}
+        <View style={[styles.section, { paddingBottom: 8 }]}>
+          <ReviewsSection
+            productTier={(tier as ProductTier) ?? 'basic'}
+            accentColor={accentColor}
           />
         </View>
 

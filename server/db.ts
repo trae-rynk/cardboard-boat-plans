@@ -209,3 +209,105 @@ export async function getDownloadsForUser(userId: number) {
   );
   return allDownloads.flat();
 }
+
+// ─── Reviews ─────────────────────────────────────────────────────────────────
+import { and, avg, count, sql } from "drizzle-orm";
+import { reviews, type InsertReview } from "../drizzle/schema";
+
+export async function createReview(data: InsertReview) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(reviews).values(data);
+  return (result as any)[0].insertId as number;
+}
+
+export async function updateReview(
+  id: number,
+  userId: number,
+  data: { rating: number; title?: string | null; body?: string | null; displayName?: string | null }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(reviews)
+    .set({ ...data, updatedAt: new Date() })
+    .where(and(eq(reviews.id, id), eq(reviews.userId, userId)));
+}
+
+export async function deleteReview(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(reviews).where(and(eq(reviews.id, id), eq(reviews.userId, userId)));
+}
+
+export async function getReviewsByProductTier(
+  productTier: "basic" | "premium",
+  limit = 20,
+  offset = 0
+) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(reviews)
+    .where(and(eq(reviews.productTier, productTier), eq(reviews.isPublished, true)))
+    .orderBy(desc(reviews.createdAt))
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function getReviewByUserAndProduct(userId: number, productTier: "basic" | "premium") {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(reviews)
+    .where(and(eq(reviews.userId, userId), eq(reviews.productTier, productTier)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getRatingStats(productTier: "basic" | "premium") {
+  const db = await getDb();
+  if (!db) return { averageRating: 0, totalReviews: 0, distribution: {} as Record<number, number> };
+
+  const rows = await db
+    .select({ rating: reviews.rating })
+    .from(reviews)
+    .where(and(eq(reviews.productTier, productTier), eq(reviews.isPublished, true)));
+
+  if (rows.length === 0) {
+    return { averageRating: 0, totalReviews: 0, distribution: {} as Record<number, number> };
+  }
+
+  const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  let total = 0;
+  for (const row of rows) {
+    distribution[row.rating] = (distribution[row.rating] ?? 0) + 1;
+    total += row.rating;
+  }
+
+  return {
+    averageRating: Math.round((total / rows.length) * 10) / 10,
+    totalReviews: rows.length,
+    distribution,
+  };
+}
+
+/** Check if a user has a paid order for a given product tier (verified purchase gate) */
+export async function hasVerifiedPurchase(userId: number, productTier: "basic" | "premium") {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db
+    .select()
+    .from(orders)
+    .where(
+      and(
+        eq(orders.userId, userId),
+        eq(orders.productTier, productTier),
+        eq(orders.status, "paid")
+      )
+    )
+    .limit(1);
+  return rows.length > 0;
+}

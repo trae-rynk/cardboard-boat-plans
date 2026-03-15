@@ -70,3 +70,32 @@ export const downloads = mysqlTable("downloads", {
 
 export type Download = typeof downloads.$inferSelect;
 export type InsertDownload = typeof downloads.$inferInsert;
+
+/**
+ * Reviews table — verified-purchaser ratings and written reviews.
+ * One review per user per product tier. Linked to a paid order.
+ */
+export const reviews = mysqlTable("reviews", {
+  id: int("id").autoincrement().primaryKey(),
+  /** The user who wrote the review */
+  userId: int("userId").notNull(),
+  /** The order that qualifies this review as a verified purchase */
+  orderId: int("orderId").notNull(),
+  /** Which product tier is being reviewed */
+  productTier: mysqlEnum("productTier", ["basic", "premium"]).notNull(),
+  /** Star rating 1–5 */
+  rating: int("rating").notNull(),
+  /** Optional written review title */
+  title: varchar("title", { length: 120 }),
+  /** Optional written review body */
+  body: text("body"),
+  /** Display name shown on the review (defaults to user name) */
+  displayName: varchar("displayName", { length: 100 }),
+  /** Whether the review is visible publicly */
+  isPublished: boolean("isPublished").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Review = typeof reviews.$inferSelect;
+export type InsertReview = typeof reviews.$inferInsert;

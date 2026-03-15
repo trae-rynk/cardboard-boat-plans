@@ -14,9 +14,11 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { ScreenContainer } from '@/components/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { StarRatingDisplay } from '@/components/star-rating';
 import { useColors } from '@/hooks/use-colors';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/hooks/use-auth';
+import type { ProductTier } from '@/constants/products';
 
 export default function DownloadsScreen() {
   const colors = useColors();
@@ -181,6 +183,20 @@ interface DownloadCardProps {
 
 function DownloadCard({ download, colors }: DownloadCardProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const router = useRouter();
+  const productTier = download.order.productTier as ProductTier;
+
+  // Only show review button on the first asset per order (avoid duplicates)
+  const isFirstAsset = download.assetType === 'pdf_plans';
+
+  const { data: canReviewData } = trpc.reviews.canReview.useQuery(
+    { productTier },
+    { enabled: isFirstAsset }
+  );
+  const { data: myReview } = trpc.reviews.myReview.useQuery(
+    { productTier },
+    { enabled: isFirstAsset && !!canReviewData?.canReview }
+  );
   const resolveToken = trpc.downloads.resolveToken.useQuery(
     { token: download.token },
     { enabled: false }
@@ -295,6 +311,35 @@ function DownloadCard({ download, colors }: DownloadCardProps) {
           </>
         )}
       </Pressable>
+
+      {/* Write / Edit Review Button (shown only on pdf_plans asset) */}
+      {isFirstAsset && canReviewData?.canReview && (
+        <Pressable
+          style={({ pressed }) => [
+            styles.reviewBtn,
+            { borderColor: accentColor, backgroundColor: accentColor + '10' },
+            pressed && { opacity: 0.75 },
+          ]}
+          onPress={() =>
+            router.push({ pathname: '/write-review', params: { tier: productTier } } as any)
+          }
+        >
+          {myReview ? (
+            <>
+              <View style={styles.reviewBtnLeft}>
+                <IconSymbol name="pencil" size={15} color={accentColor} />
+                <Text style={[styles.reviewBtnText, { color: accentColor }]}>Edit Your Review</Text>
+              </View>
+              <StarRatingDisplay rating={myReview.rating} size={13} />
+            </>
+          ) : (
+            <>
+              <IconSymbol name="star.fill" size={15} color={accentColor} />
+              <Text style={[styles.reviewBtnText, { color: accentColor }]}>Write a Review</Text>
+            </>
+          )}
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -462,6 +507,27 @@ const styles = StyleSheet.create({
   downloadBtnText: {
     color: '#FFFFFF',
     fontSize: 15,
+    fontWeight: '700',
+  },
+  reviewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginHorizontal: 12,
+    marginBottom: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  reviewBtnLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  reviewBtnText: {
+    fontSize: 14,
     fontWeight: '700',
   },
 });
