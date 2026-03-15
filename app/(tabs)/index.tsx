@@ -1,10 +1,13 @@
 import { ScrollView, Text, View, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/screen-container';
 import { ImagePlaceholder } from '@/components/image-placeholder';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/hooks/use-colors';
 import { PRODUCTS, TESTIMONIALS } from '@/constants/products';
+
+const HERO_IMAGE = require('@/assets/images/hero1.jpg');
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -23,11 +26,12 @@ export default function HomeScreen() {
         </View>
 
         {/* Hero Image */}
-        <ImagePlaceholder
-          height={220}
-          label="Hero Photo — Cardboard Boat Race"
-          iconSize={36}
-          style={{ borderRadius: 0, borderWidth: 0, borderBottomWidth: 2 }}
+        <Image
+          source={HERO_IMAGE}
+          style={{ width: '100%', height: 220 }}
+          contentFit="cover"
+          transition={300}
+          accessibilityLabel="Eight-time champion cardboard boat racer"
         />
 
         {/* Tagline Section */}

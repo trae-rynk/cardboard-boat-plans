@@ -1,8 +1,10 @@
 import { ScrollView, Text, View, Pressable, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/screen-container';
 import { ImagePlaceholder } from '@/components/image-placeholder';
+
 import { VideoPlaceholder } from '@/components/video-placeholder';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/hooks/use-colors';
@@ -10,6 +12,8 @@ import { PRODUCTS, type ProductTier } from '@/constants/products';
 import { ReviewsSection } from '@/components/reviews-list';
 import { StarRatingDisplay } from '@/components/star-rating';
 import { trpc } from '@/lib/trpc';
+
+const HERO_IMAGE = require('@/assets/images/hero1.jpg');
 
 export default function ProductDetailScreen() {
   const { tier } = useLocalSearchParams<{ tier: string }>();
@@ -47,11 +51,12 @@ export default function ProductDetailScreen() {
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* Hero Image */}
-        <ImagePlaceholder
-          height={260}
-          label="Product Hero Image"
-          iconSize={40}
-          style={{ borderRadius: 0, borderWidth: 0, borderBottomWidth: 2 }}
+        <Image
+          source={HERO_IMAGE}
+          style={{ width: '100%', height: 260 }}
+          contentFit="cover"
+          transition={300}
+          accessibilityLabel="Award-winning cardboard boat racer on the water"
         />
 
         {/* Product Header */}

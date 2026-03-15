@@ -88,3 +88,7 @@
 - [x] Show "Verified Purchase" badge on reviews from real buyers
 - [x] Handle duplicate review prevention (one per user per product)
 - [x] Add review count to Home screen product cards
+
+## Content Updates
+- [x] Add hero1.jpg to app assets and replace Home screen hero placeholder
+- [x] Replace Product Detail hero image placeholder with hero1.jpg
