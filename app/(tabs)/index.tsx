@@ -23,20 +23,16 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
       >
-        {/* Hero Image — full-bleed from top, overlaid title */}
-        <View style={styles.heroContainer}>
+        {/* Hero Image — full-bleed, full photo visible, no crop */}
+        {/* Image is 1232×684 → aspect ratio 684/1232 ≈ 0.555 */}
+        <View style={[styles.heroContainer, { paddingTop: insets.top }]}>
           <Image
             source={HERO_IMAGE}
-            style={[styles.heroImage, { height: 280 + insets.top }]}
-            contentFit="cover"
+            style={styles.heroImage}
+            contentFit="contain"
             transition={300}
             accessibilityLabel="Eight-time champion cardboard boat racer"
           />
-          {/* Dark gradient overlay for legibility */}
-          <View style={[styles.heroOverlay, { paddingTop: insets.top + 16 }]}>
-            <Text style={styles.heroTitle}>Cardboard Boat Builder</Text>
-            <Text style={styles.heroSubtitle}>Award-Winning Plans & Techniques</Text>
-          </View>
         </View>
 
         {/* Tagline Section */}
@@ -211,44 +207,13 @@ const HOW_IT_WORKS = [
 
 const styles = StyleSheet.create({
   heroContainer: {
-    position: 'relative',
     width: '100%',
+    backgroundColor: '#000',
   },
+  // Image native size: 1232 x 684 — aspect ratio = 684/1232
   heroImage: {
     width: '100%',
-  },
-  heroOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.38)',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-  },
-  heroTitle: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 0.4,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  heroSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 4,
-    fontWeight: '600',
-    textAlign: 'center',
-    letterSpacing: 0.3,
-    textShadowColor: 'rgba(0,0,0,0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    aspectRatio: 1232 / 684,
   },
   taglineSection: {
     padding: 24,
