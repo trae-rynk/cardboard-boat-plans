@@ -92,3 +92,4 @@
 ## Content Updates
 - [x] Add hero1.jpg to app assets and replace Home screen hero placeholder
 - [x] Replace Product Detail hero image placeholder with hero1.jpg
+- [x] Remove blue header bar from Home screen; hero image fills top edge-to-edge

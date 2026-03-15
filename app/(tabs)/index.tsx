@@ -1,4 +1,5 @@
-import { ScrollView, Text, View, Pressable, StyleSheet } from 'react-native';
+import { ScrollView, Text, View, Pressable, StyleSheet, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/screen-container';
@@ -13,26 +14,30 @@ export default function HomeScreen() {
   const colors = useColors();
   const router = useRouter();
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <ScreenContainer edges={['top', 'left', 'right']}>
+    // Use edges={[]} so the hero image can bleed under the status bar
+    <ScreenContainer edges={[]} containerClassName="bg-background">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
       >
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.primary }]}>
-          <Text style={styles.headerTitle}>Cardboard Boat Builder</Text>
-          <Text style={styles.headerSubtitle}>Award-Winning Plans & Techniques</Text>
+        {/* Hero Image — full-bleed from top, overlaid title */}
+        <View style={styles.heroContainer}>
+          <Image
+            source={HERO_IMAGE}
+            style={[styles.heroImage, { height: 280 + insets.top }]}
+            contentFit="cover"
+            transition={300}
+            accessibilityLabel="Eight-time champion cardboard boat racer"
+          />
+          {/* Dark gradient overlay for legibility */}
+          <View style={[styles.heroOverlay, { paddingTop: insets.top + 16 }]}>
+            <Text style={styles.heroTitle}>Cardboard Boat Builder</Text>
+            <Text style={styles.heroSubtitle}>Award-Winning Plans & Techniques</Text>
+          </View>
         </View>
-
-        {/* Hero Image */}
-        <Image
-          source={HERO_IMAGE}
-          style={{ width: '100%', height: 220 }}
-          contentFit="cover"
-          transition={300}
-          accessibilityLabel="Eight-time champion cardboard boat racer"
-        />
 
         {/* Tagline Section */}
         <View style={[styles.taglineSection, { backgroundColor: colors.surface }]}>
@@ -205,23 +210,45 @@ const HOW_IT_WORKS = [
 ];
 
 const styles = StyleSheet.create({
-  header: {
-    paddingTop: 16,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+  heroContainer: {
+    position: 'relative',
+    width: '100%',
+  },
+  heroImage: {
+    width: '100%',
+  },
+  heroOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.38)',
     alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 24,
+    paddingHorizontal: 20,
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
+  heroTitle: {
+    fontSize: 26,
+    fontWeight: '900',
     color: '#FFFFFF',
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
-  headerSubtitle: {
+  heroSubtitle: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255,255,255,0.9)',
     marginTop: 4,
-    fontWeight: '500',
+    fontWeight: '600',
+    textAlign: 'center',
+    letterSpacing: 0.3,
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   taglineSection: {
     padding: 24,
