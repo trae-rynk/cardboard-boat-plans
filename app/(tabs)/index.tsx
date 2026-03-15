@@ -153,7 +153,7 @@ export default function HomeScreen() {
 
         {/* Testimonials */}
         <View style={styles.sectionContainer}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+          <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>
             What Builders Say
           </Text>
           {TESTIMONIALS.map((t) => (
