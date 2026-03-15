@@ -14,6 +14,7 @@ import { StarRatingDisplay } from '@/components/star-rating';
 import { trpc } from '@/lib/trpc';
 
 const HERO_IMAGE = require('@/assets/images/hero1.jpg');
+const BASIC_PLANS_IMAGE = require('@/assets/images/boatplans1.jpg');
 
 export default function ProductDetailScreen() {
   const { tier } = useLocalSearchParams<{ tier: string }>();
@@ -102,16 +103,29 @@ export default function ProductDetailScreen() {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Gallery</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
-            {[1, 2, 3].map((i) => (
-              <ImagePlaceholder
-                key={i}
-                width={160}
-                height={120}
-                label={`Photo ${i}`}
-                iconSize={20}
-                style={{ marginRight: 12, borderRadius: 10 }}
-              />
-            ))}
+            {/* First gallery slot — boat plans construction photo */}
+            <Image
+              source={BASIC_PLANS_IMAGE}
+              style={{ width: 160, height: 120, borderRadius: 10, marginRight: 12 }}
+              contentFit="cover"
+              transition={200}
+              accessibilityLabel="Cardboard boat construction"
+            />
+            {/* Remaining gallery slots — add more photos here */}
+            <ImagePlaceholder
+              width={160}
+              height={120}
+              label="Photo 2"
+              iconSize={20}
+              style={{ marginRight: 12, borderRadius: 10 }}
+            />
+            <ImagePlaceholder
+              width={160}
+              height={120}
+              label="Photo 3"
+              iconSize={20}
+              style={{ marginRight: 12, borderRadius: 10 }}
+            />
           </ScrollView>
         </View>
 

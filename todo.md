@@ -95,3 +95,4 @@
 - [x] Remove blue header bar from Home screen; hero image fills top edge-to-edge
 - [x] Fix hero image clipping — show full photo without cropping edges
 - [x] Remove "Cardboard Boat Builder" text overlay from hero image
+- [x] Add boatplans1.jpg as Basic Plans card preview image on Home and Product Detail screens

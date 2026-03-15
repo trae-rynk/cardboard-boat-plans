@@ -9,6 +9,7 @@ import { useColors } from '@/hooks/use-colors';
 import { PRODUCTS, TESTIMONIALS } from '@/constants/products';
 
 const HERO_IMAGE = require('@/assets/images/hero1.jpg');
+const BASIC_PLANS_IMAGE = require('@/assets/images/boatplans1.jpg');
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -68,7 +69,13 @@ export default function HomeScreen() {
             ]}
            onPress={() => router.push({ pathname: '/product/[tier]', params: { tier: 'basic' } })}
           >
-            <ImagePlaceholder height={140} label="Boat Plans Preview Image" iconSize={24} />
+            <Image
+              source={BASIC_PLANS_IMAGE}
+              style={{ width: '100%', height: 140 }}
+              contentFit="cover"
+              transition={200}
+              accessibilityLabel="Cardboard boat construction plans"
+            />
             <View style={styles.productCardBody}>
               <Text style={[styles.productName, { color: colors.foreground }]}>
                 {PRODUCTS.basic.name}
