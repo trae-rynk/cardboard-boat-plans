@@ -16,9 +16,9 @@ export default function PackagesScreen() {
         contentContainerStyle={{ paddingBottom: 40 }}
       >
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.primary }]}>
-          <Text style={styles.headerTitle}>Choose Your Package</Text>
-          <Text style={styles.headerSubtitle}>
+        <View style={[styles.header, { backgroundColor: colors.background }]}>
+          <Text style={[styles.headerTitle, { color: '#1a3a5c' }]}>Choose Your Package</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.muted }]}>
             Instant digital download after purchase
           </Text>
         </View>
@@ -146,11 +146,9 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#FFFFFF',
   },
   headerSubtitle: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
     fontWeight: '500',
   },
   content: {

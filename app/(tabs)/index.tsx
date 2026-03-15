@@ -131,7 +131,7 @@ export default function HomeScreen() {
 
         {/* How It Works */}
         <View style={[styles.howItWorksSection, { backgroundColor: colors.primary + '0F' }]}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+          <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>
             How It Works
           </Text>
           {HOW_IT_WORKS.map((step, index) => (
@@ -140,7 +140,7 @@ export default function HomeScreen() {
                 <Text style={styles.stepNumberText}>{index + 1}</Text>
               </View>
               <View style={styles.stepContent}>
-                <Text style={[styles.stepTitle, { color: colors.foreground }]}>
+                <Text style={[styles.stepTitle, { color: '#1a3a5c' }]}>
                   {step.title}
                 </Text>
                 <Text style={[styles.stepBody, { color: colors.muted }]}>
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   },
   stepTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   stepBody: {
     fontSize: 14,

@@ -98,3 +98,5 @@
 - [x] Add boatplans1.jpg as Basic Plans card preview image on Home and Product Detail screens
 - [x] Update tagline badge to "Competition-Tested Plan"
 - [x] Update Home screen body paragraph with new copy
+- [x] Apply dark navy blue (#1a3a5c) to all section header text across all screens
+- [x] Bold the How It Works step titles in dark navy blue

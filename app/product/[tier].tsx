@@ -84,7 +84,7 @@ export default function ProductDetailScreen() {
 
         {/* What's Included */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>What's Included</Text>
+          <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>What's Included</Text>
           <View style={[styles.featureCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             {product.features
               .filter((f) => f.included)
@@ -101,7 +101,7 @@ export default function ProductDetailScreen() {
 
         {/* Photo Gallery */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Gallery</Text>
+          <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>Gallery</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
             {/* First gallery slot — boat plans construction photo */}
             <Image
@@ -132,7 +132,7 @@ export default function ProductDetailScreen() {
         {/* Video Preview (Premium only) */}
         {tier === 'premium' && (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+            <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>
               Video Tutorial Preview
             </Text>
             <VideoPlaceholder
@@ -147,7 +147,7 @@ export default function ProductDetailScreen() {
 
         {/* Additional Images */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Build Examples</Text>
+          <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>Build Examples</Text>
           <ImagePlaceholder
             height={180}
             label="Finished Boat Example Photo"
