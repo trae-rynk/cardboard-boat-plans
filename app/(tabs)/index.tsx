@@ -41,16 +41,15 @@ export default function HomeScreen() {
           <View style={[styles.badge, { backgroundColor: colors.accent + '22' }]}>
             <IconSymbol name="trophy.fill" size={14} color={colors.accent} />
             <Text style={[styles.badgeText, { color: colors.accent }]}>
-              Competition-Tested Plans
+              Competition-Tested Plan
             </Text>
           </View>
           <Text style={[styles.taglineHeading, { color: colors.foreground }]}>
             Build an Award-Winning{'\n'}Cardboard Boat
           </Text>
           <Text style={[styles.taglineBody, { color: colors.muted }]}>
-            Whether you're a first-time builder or a seasoned regatta competitor, our
-            detailed plans give you everything you need to design, build, and race a
-            championship-caliber cardboard boat.
+            Most boats sink and fail. Let us help you build a boat that is easy to
+            build, durable, and most importantly fast.
           </Text>
         </View>
 

@@ -96,3 +96,5 @@
 - [x] Fix hero image clipping — show full photo without cropping edges
 - [x] Remove "Cardboard Boat Builder" text overlay from hero image
 - [x] Add boatplans1.jpg as Basic Plans card preview image on Home and Product Detail screens
+- [x] Update tagline badge to "Competition-Tested Plan"
+- [x] Update Home screen body paragraph with new copy
