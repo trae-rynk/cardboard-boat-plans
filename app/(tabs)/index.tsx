@@ -191,6 +191,11 @@ export default function HomeScreen() {
             <Text style={styles.ctaButtonText}>See Packages →</Text>
           </View>
         </Pressable>
+
+        {/* Copyright Footer */}
+        <View style={styles.copyrightFooter}>
+          <Text style={styles.copyrightText}>© 2026 Champion Cardboard Boat Plans. All Rights Reserved.</Text>
+        </View>
       </ScrollView>
     </ScreenContainer>
   );
@@ -395,5 +400,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
+  },
+  copyrightFooter: {
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  copyrightText: {
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'center',
   },
 });
