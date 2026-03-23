@@ -14,7 +14,7 @@ import { StarRatingDisplay } from '@/components/star-rating';
 import { trpc } from '@/lib/trpc';
 
 const HERO_IMAGE = require('@/assets/images/hero1.jpg');
-const BASIC_PLANS_IMAGE = require('@/assets/images/boatplans1.jpg');
+const BOAT1_IMAGE = require('@/assets/images/boat1.png');
 
 export default function ProductDetailScreen() {
   const { tier } = useLocalSearchParams<{ tier: string }>();
@@ -105,7 +105,7 @@ export default function ProductDetailScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
             {/* First gallery slot — boat plans construction photo */}
             <Image
-              source={BASIC_PLANS_IMAGE}
+              source={BOAT1_IMAGE}
               style={{ width: 160, height: 120, borderRadius: 10, marginRight: 12 }}
               contentFit="cover"
               transition={200}

@@ -101,3 +101,10 @@
 - [x] Apply dark navy blue (#1a3a5c) to all section header text across all screens
 - [x] Bold the How It Works step titles in dark navy blue
 - [x] Add copyright footer to bottom of Home screen
+
+## SKU 1 — Builder Plan Package
+- [x] Copy boat1.png to app assets and replace Basic card image placeholder
+- [x] Upload BuilderPlan.pdf to server file storage
+- [x] Update product name to "Builder Plan Package"
+- [x] Update Basic package tagline, price ($19.99), and feature list
+- [x] Wire BuilderPlan.pdf URL to post-purchase download delivery

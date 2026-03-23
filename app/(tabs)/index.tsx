@@ -9,7 +9,7 @@ import { useColors } from '@/hooks/use-colors';
 import { PRODUCTS, TESTIMONIALS } from '@/constants/products';
 
 const HERO_IMAGE = require('@/assets/images/hero1.jpg');
-const BASIC_PLANS_IMAGE = require('@/assets/images/boatplans1.jpg');
+const BASIC_PLANS_IMAGE = require('@/assets/images/boat1.png');
 
 export default function HomeScreen() {
   const colors = useColors();

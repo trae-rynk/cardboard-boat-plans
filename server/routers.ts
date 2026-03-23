@@ -299,7 +299,7 @@ export const appRouter = router({
         // In production: generate a signed S3 URL here
         // For now: return a placeholder URL based on asset type
         const PLACEHOLDER_URLS: Record<string, string> = {
-          pdf_plans: "https://www.w3.org/WAI/WCAG21/Techniques/pdf/PDF1",
+          pdf_plans: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663440726246/ffmRMeRiboUTqtrm.pdf",
           video_series: "https://example.com/video-series",
           design_hacks: "https://example.com/design-hacks",
         };

@@ -20,19 +20,17 @@ export interface Product {
 export const PRODUCTS: Record<ProductTier, Product> = {
   basic: {
     id: 'basic',
-    name: 'Basic Plans Package',
-    tagline: 'Everything you need to get started',
+    name: 'Builder Plan Package',
+    tagline: 'Weekend-ready. Competition-proven.',
     price: 1999, // cents
     priceDisplay: '$19.99',
     description:
-      'Get the complete set of detailed, competition-tested cardboard boat plans. These plans have helped builders win awards at regattas across the country. Includes full-size templates, material lists, and step-by-step construction guides.',
+      'Everything you need to build a fast, durable, award-winning cardboard boat — even if you have never built one before. Our fully illustrated plans walk you through every cut and fold with exact panel templates so there is no guesswork. Beginner-friendly and fast: most builders finish in a single weekend.',
     features: [
-      { text: 'Full-size PDF plan set (12 pages)', included: true },
-      { text: 'Materials & tools checklist', included: true },
-      { text: 'Step-by-step construction guide', included: true },
-      { text: 'Hull design templates', included: true },
-      { text: 'Waterproofing techniques guide', included: true },
-      { text: 'Competition tips & rules overview', included: true },
+      { text: 'Fully illustrated step-by-step build diagrams', included: true },
+      { text: 'Exact panel cut templates', included: true },
+      { text: 'Beginner-friendly design', included: true },
+      { text: 'Fast build — weekend ready', included: true },
       { text: 'Video tutorial series (6 videos)', included: false },
       { text: 'Advanced design hacks', included: false },
       { text: 'Speed optimization secrets', included: false },
