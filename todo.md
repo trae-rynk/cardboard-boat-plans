@@ -108,3 +108,4 @@
 - [x] Update product name to "Builder Plan Package"
 - [x] Update Basic package tagline, price ($19.99), and feature list
 - [x] Wire BuilderPlan.pdf URL to post-purchase download delivery
+- [x] Replace Builder Plan Package card image with Cover2A.jpg on Home and Product Detail screens

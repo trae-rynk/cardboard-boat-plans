@@ -14,7 +14,7 @@ import { StarRatingDisplay } from '@/components/star-rating';
 import { trpc } from '@/lib/trpc';
 
 const HERO_IMAGE = require('@/assets/images/hero1.jpg');
-const BOAT1_IMAGE = require('@/assets/images/boat1.png');
+const BOAT1_IMAGE = require('@/assets/images/cover2a.jpg');
 
 export default function ProductDetailScreen() {
   const { tier } = useLocalSearchParams<{ tier: string }>();
