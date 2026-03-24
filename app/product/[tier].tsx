@@ -187,18 +187,6 @@ export default function ProductDetailScreen() {
           />
         </View>
 
-        {/* Guarantee */}
-        <View style={[styles.guaranteeBox, { backgroundColor: colors.success + '12', borderColor: colors.success + '44' }]}>
-          <IconSymbol name="checkmark.seal.fill" size={24} color={colors.success} />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.guaranteeTitle, { color: colors.foreground }]}>
-              30-Day Money-Back Guarantee
-            </Text>
-            <Text style={[styles.guaranteeBody, { color: colors.muted }]}>
-              Not satisfied? We'll refund your purchase, no questions asked.
-            </Text>
-          </View>
-        </View>
       </ScrollView>
 
       {/* Sticky Bottom CTA */}
@@ -315,24 +303,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     fontStyle: 'italic',
-  },
-  guaranteeBox: {
-    margin: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  guaranteeTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  guaranteeBody: {
-    fontSize: 13,
-    lineHeight: 19,
   },
   stickyBottom: {
     position: 'absolute',

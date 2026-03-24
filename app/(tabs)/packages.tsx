@@ -24,14 +24,6 @@ export default function PackagesScreen() {
         </View>
 
         <View style={styles.content}>
-          {/* Guarantee badge */}
-          <View style={[styles.guaranteeBadge, { backgroundColor: colors.success + '18', borderColor: colors.success + '44' }]}>
-            <IconSymbol name="checkmark.seal.fill" size={16} color={colors.success} />
-            <Text style={[styles.guaranteeText, { color: colors.success }]}>
-              30-Day Money-Back Guarantee
-            </Text>
-          </View>
-
           {/* Basic Package */}
           <PackageCard
             product={PRODUCTS.basic}
@@ -163,18 +155,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     gap: 20,
-  },
-  guaranteeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  guaranteeText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   packageCard: {
     borderRadius: 16,

@@ -152,3 +152,10 @@
 - [x] Copy Upgrade.jpg into project assets
 - [x] Use Upgrade.jpg as the main image on the Premium Builder Package card
 - [x] Update Premium description to "The complete award-winning system plus 30 days of live support."
+
+## Product Content Cleanup
+- [x] Update Premium description text
+- [x] Remove video tutorial, design hacks, speed optimization from Premium features list
+- [x] Remove those same items from Basic features list (they were already marked excluded)
+- [x] Remove 30-day money-back guarantee badge from packages screen
+- [x] Remove 30-day money-back guarantee from product detail screen
