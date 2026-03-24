@@ -108,13 +108,13 @@ export default function ProductDetailScreen() {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>Gallery</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
-            {/* First gallery slot — boat plans construction photo */}
+            {/* First gallery slot — product hero image (or default boat plans photo) */}
             <Image
-              source={BOAT1_IMAGE}
+              source={product.heroImage ?? BOAT1_IMAGE}
               style={{ width: 160, height: 120, borderRadius: 10, marginRight: 12 }}
               contentFit="cover"
               transition={200}
-              accessibilityLabel="Cardboard boat construction"
+              accessibilityLabel={product.heroImage ? 'Captain Bob Premium Package' : 'Cardboard boat construction'}
             />
             {/* Gallery slot 2 — build in progress */}
             <Image

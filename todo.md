@@ -159,3 +159,6 @@
 - [x] Remove those same items from Basic features list (they were already marked excluded)
 - [x] Remove 30-day money-back guarantee badge from packages screen
 - [x] Remove 30-day money-back guarantee from product detail screen
+
+## Premium Detail Screen Hero Image
+- [x] Use Upgrade.jpg (product.heroImage) as the hero on the Premium product detail screen
