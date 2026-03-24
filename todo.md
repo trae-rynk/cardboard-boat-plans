@@ -131,3 +131,19 @@
 - [x] Wire scheduleReviewEmail into confirmPayment flow (all SKUs)
 - [x] write-review.tsx accepts orderId+token params (deep link target from email)
 - [x] Test full flow: purchase → in-app prompt → email at day 5 → review submitted
+
+## Captain Bob Chatbot (Premium Feature)
+- [x] Add chatEntitlements table to schema
+- [x] Add chatMessages table to schema
+- [x] Run database migration for chat tables
+- [x] Add chat DB functions: createEntitlement, getEntitlementByToken, getEntitlementByOrderId, addMessage, getMessages, incrementMessageCount, extendEntitlement
+- [x] Add chat tRPC routes: getEntitlement, sendMessage (with cap enforcement), extendChat (extension SKU purchase)
+- [x] Wire createChatEntitlement into confirmPayment for Premium orders
+- [x] Add chat_support_extension SKU ($9.99 / 30 days) handled via chat.createExtensionIntent route
+- [x] Build Captain Bob chat UI screen (message thread, input bar, status bar)
+- [x] Build entitlement status bar (days remaining, messages remaining)
+- [x] Build expired/upgrade state UI with extension purchase CTA
+- [x] Add Chat tab to tab navigation (Captain Bob tab always visible, gated by credentials)
+- [x] Wire extension purchase flow (Stripe intent → confirmExtension → extend entitlement)
+- [x] Add OpenAI GPT stub (returns smart demo responses, activates with OPENAI_API_KEY)
+- [x] Test full flow: Premium purchase → entitlement created → chat works → cap enforced → extension purchase extends window

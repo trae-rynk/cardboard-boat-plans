@@ -118,11 +118,23 @@ export const appRouter = router({
           (err) => console.warn("[ReviewEmail] Failed to schedule:", err)
         );
 
+        // Create Captain Bob chat entitlement for Premium orders
+        let chatToken: string | undefined;
+        if (order.productTier === "premium") {
+          try {
+            const entitlement = await db.createChatEntitlement(order.id, order.email);
+            chatToken = entitlement.chatToken;
+          } catch (err) {
+            console.warn("[Chat] Failed to create entitlement for order #", order.id, err);
+          }
+        }
+
         return {
           success: true,
           orderId: order.id,
           productTier: order.productTier,
           guestReviewToken: order.guestReviewToken,
+          chatToken,
           downloads: downloads.map((d) => ({
             token: d.token,
             displayName: d.displayName,
@@ -300,9 +312,259 @@ export const appRouter = router({
         };
       }),
   }),
+
+  // ─── Captain Bob Chat ───────────────────────────────────────────────────────────
+  chat: router({
+    /**
+     * Get the chat entitlement status for a Premium order.
+     * Returns days remaining, messages remaining, and active status.
+     */
+    getEntitlement: publicProcedure
+      .input(z.object({ orderId: z.number(), chatToken: z.string() }))
+      .query(async ({ input }) => {
+        const entitlement = await db.getEntitlementByToken(input.chatToken);
+        if (!entitlement || entitlement.orderId !== input.orderId) return null;
+
+        const now = new Date();
+        const isExpiredByDate = entitlement.expiresAt < now;
+        const isExpiredByCount = entitlement.messageCount >= entitlement.messageLimit;
+        const isActive = entitlement.status === "active" && !isExpiredByDate && !isExpiredByCount;
+
+        const msRemaining = Math.max(0, entitlement.expiresAt.getTime() - now.getTime());
+        const daysRemaining = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
+        const messagesRemaining = Math.max(0, entitlement.messageLimit - entitlement.messageCount);
+
+        return {
+          id: entitlement.id,
+          isActive,
+          daysRemaining,
+          messagesRemaining,
+          messageLimit: entitlement.messageLimit,
+          messageCount: entitlement.messageCount,
+          expiresAt: entitlement.expiresAt.toISOString(),
+          extensionCount: entitlement.extensionCount,
+          status: isExpiredByDate || isExpiredByCount ? "expired" : entitlement.status,
+        };
+      }),
+
+    /**
+     * Get the last 50 messages for a chat session.
+     */
+    getHistory: publicProcedure
+      .input(z.object({ orderId: z.number(), chatToken: z.string() }))
+      .query(async ({ input }) => {
+        const entitlement = await db.getEntitlementByToken(input.chatToken);
+        if (!entitlement || entitlement.orderId !== input.orderId) return [];
+        return db.getChatHistory(entitlement.id, 50);
+      }),
+
+    /**
+     * Send a message to Captain Bob and get a reply.
+     * Enforces message cap and expiry window.
+     */
+    sendMessage: publicProcedure
+      .input(
+        z.object({
+          orderId: z.number(),
+          chatToken: z.string(),
+          message: z.string().min(1).max(1000),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const entitlement = await db.getEntitlementByToken(input.chatToken);
+        if (!entitlement || entitlement.orderId !== input.orderId) {
+          throw new Error("Invalid chat token.");
+        }
+
+        // Enforce expiry
+        if (entitlement.expiresAt < new Date()) {
+          throw new Error("EXPIRED: Your 30-day support window has ended.");
+        }
+
+        // Enforce message cap
+        if (entitlement.messageCount >= entitlement.messageLimit) {
+          throw new Error("LIMIT_REACHED: You have used all 1,000 messages in this support window.");
+        }
+
+        // Save user message
+        await db.saveChatMessage(entitlement.id, "user", input.message);
+
+        // Get recent history for context (last 10 exchanges = 20 messages)
+        const history = await db.getChatHistory(entitlement.id, 20);
+        const historyForAI = history
+          .slice(0, -1) // exclude the message we just saved
+          .map((m) => ({ role: m.role, content: m.content }));
+
+        // Generate Captain Bob reply
+        const reply = await captainBobReply(input.message, historyForAI);
+
+        // Save assistant reply
+        await db.saveChatMessage(entitlement.id, "assistant", reply);
+
+        // Increment message count (counts only user messages)
+        await db.incrementChatMessageCount(
+          entitlement.id,
+          entitlement.messageCount,
+          entitlement.messageLimit
+        );
+
+        return {
+          reply,
+          messagesRemaining: Math.max(0, entitlement.messageLimit - entitlement.messageCount - 1),
+        };
+      }),
+
+    /**
+     * Purchase a 30-day extension for $9.99.
+     * Creates a Stripe PaymentIntent for the extension SKU.
+     */
+    createExtensionIntent: publicProcedure
+      .input(z.object({ orderId: z.number(), chatToken: z.string(), email: z.string().email() }))
+      .mutation(async ({ input }) => {
+        const entitlement = await db.getEntitlementByToken(input.chatToken);
+        if (!entitlement || entitlement.orderId !== input.orderId) {
+          throw new Error("Invalid chat token.");
+        }
+
+        const EXTENSION_PRICE_CENTS = 999; // $9.99
+
+        let clientSecret: string | null = null;
+        let stripePaymentIntentId: string | null = null;
+
+        try {
+          const stripe = await getStripe();
+          const intent = await stripe.paymentIntents.create({
+            amount: EXTENSION_PRICE_CENTS,
+            currency: "usd",
+            receipt_email: input.email,
+            metadata: {
+              type: "chat_extension",
+              entitlementId: String(entitlement.id),
+              orderId: String(input.orderId),
+            },
+          });
+          clientSecret = intent.client_secret;
+          stripePaymentIntentId = intent.id;
+        } catch (err) {
+          console.warn("[Stripe] Extension payment intent failed:", err);
+        }
+
+        return {
+          clientSecret,
+          stripePaymentIntentId,
+          amountCents: EXTENSION_PRICE_CENTS,
+          stripeConfigured: !!process.env.STRIPE_SECRET_KEY,
+        };
+      }),
+
+    /**
+     * Confirm an extension purchase and extend the entitlement by 30 days.
+     */
+    confirmExtension: publicProcedure
+      .input(
+        z.object({
+          orderId: z.number(),
+          chatToken: z.string(),
+          stripePaymentIntentId: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const entitlement = await db.getEntitlementByToken(input.chatToken);
+        if (!entitlement || entitlement.orderId !== input.orderId) {
+          throw new Error("Invalid chat token.");
+        }
+
+        // Verify with Stripe if configured
+        if (process.env.STRIPE_SECRET_KEY && input.stripePaymentIntentId) {
+          const stripe = await getStripe();
+          const intent = await stripe.paymentIntents.retrieve(input.stripePaymentIntentId);
+          if (intent.status !== "succeeded") {
+            throw new Error(`Extension payment not completed: ${intent.status}`);
+          }
+        }
+
+        const newExpiresAt = await db.extendChatEntitlement(entitlement.id, entitlement.expiresAt);
+
+        return {
+          success: true,
+          newExpiresAt: newExpiresAt.toISOString(),
+          extensionCount: entitlement.extensionCount + 1,
+        };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
+
+// ─── Captain Bob AI ───────────────────────────────────────────────────────────
+/**
+ * Generates a Captain Bob reply.
+ * Currently uses a smart stub — swap in OpenAI by setting OPENAI_API_KEY.
+ */
+async function captainBobReply(
+  userMessage: string,
+  history: Array<{ role: "user" | "assistant"; content: string }>
+): Promise<string> {
+  // ── OpenAI path (activated when OPENAI_API_KEY is set) ──────────────────
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const { default: OpenAI } = await import("openai");
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      const SYSTEM_PROMPT = `You are Captain Bob, the friendly expert support assistant for Champion Cardboard Boats.
+You help customers who have purchased cardboard boat building plans.
+
+Your expertise covers:
+- Cardboard boat construction techniques (hull design, reinforcement, waterproofing)
+- Materials: corrugated cardboard grades, duct tape, Gorilla tape, spray paint, polyurethane
+- Build timeline planning (most boats take 1-2 weekends)
+- Race strategy and competition tips
+- Common mistakes and how to fix them
+- The specific Champion Cardboard Boat plans (12-page PDF, step-by-step diagrams, panel templates)
+
+Tone: Friendly, encouraging, nautical (occasional sailing metaphors welcome). Keep answers concise and practical.
+If asked about something unrelated to boat building or the plans, politely redirect to your area of expertise.
+Always refer to yourself as Captain Bob.`;
+
+      const messages = [
+        { role: "system" as const, content: SYSTEM_PROMPT },
+        ...history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
+        { role: "user" as const, content: userMessage },
+      ];
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages,
+        max_tokens: 400,
+        temperature: 0.7,
+      });
+
+      return completion.choices[0]?.message?.content ?? "Arr, I seem to have lost my sea legs for a moment. Please try again!";
+    } catch (err) {
+      console.error("[CaptainBob] OpenAI error:", err);
+      return "Arr, I'm having a bit of trouble with my radio right now. Please try again in a moment!";
+    }
+  }
+
+  // ── Stub path (no API key — returns helpful demo responses) ─────────────
+  const lower = userMessage.toLowerCase();
+  if (lower.includes("waterproof") || lower.includes("seal")) {
+    return "Ahoy! For waterproofing, I recommend 3 coats of exterior polyurethane spray on all seams and the hull bottom. Let each coat dry fully (about 2 hours) before the next. Pay extra attention to the bow — that's where water pressure is highest in a race. 🚢";
+  }
+  if (lower.includes("tape") || lower.includes("duct")) {
+    return "Great question! Gorilla tape is my top pick — it bonds better to cardboard than standard duct tape and holds up under water pressure. Use it on all external seams. For interior reinforcement, standard duct tape works fine and saves a few dollars. 🏆";
+  }
+  if (lower.includes("cardboard") || lower.includes("material")) {
+    return "For the hull panels, use double-wall corrugated cardboard (the thicker kind from appliance boxes). Single-wall works for interior bracing but not the hull. Hardware stores sometimes give away appliance boxes for free — worth asking! 📦";
+  }
+  if (lower.includes("how long") || lower.includes("time") || lower.includes("weekend")) {
+    return "Most builders complete the hull in one weekend — about 8-10 hours total. Day 1: cut and assemble the panels. Day 2: tape all seams, waterproof, and let it cure overnight. I'd recommend doing a quick float test in a bathtub before race day! ⏱️";
+  }
+  if (lower.includes("race") || lower.includes("competition") || lower.includes("win")) {
+    return "Race day tips from an 8-time champion: (1) Keep your crew weight centered and low. (2) Practice your paddle stroke before the race. (3) Bring extra tape for last-minute repairs. (4) Smile for the crowd — half the judges score on showmanship! 🏅";
+  }
+  return `Ahoy! I'm Captain Bob, your Champion Cardboard Boats support expert. I'm here to help you build a winning boat! Ask me anything about construction techniques, materials, waterproofing, or race strategy. What would you like to know? ⚓`;
+}
 
 // ─── Review Email Scheduler ───────────────────────────────────────────────────
 /**

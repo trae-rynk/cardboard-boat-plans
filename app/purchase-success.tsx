@@ -8,6 +8,7 @@ import { useColors } from '@/hooks/use-colors';
 import { PRODUCTS, type ProductTier } from '@/constants/products';
 import { trpc } from '@/lib/trpc';
 import { RateProductModal } from '@/components/rate-product-modal';
+import { saveChatCredentials } from '@/lib/chat-store';
 
 export default function PurchaseSuccessScreen() {
   const { orderId, productTier } = useLocalSearchParams<{
@@ -61,6 +62,13 @@ export default function PurchaseSuccessScreen() {
   );
 
   const guestReviewToken = orderData?.guestReviewToken ?? '';
+
+  // Save Captain Bob chat credentials for Premium orders
+  useEffect(() => {
+    if (orderData && productTier === 'premium' && (orderData as any).chatToken) {
+      saveChatCredentials(Number(orderId), (orderData as any).chatToken).catch(console.warn);
+    }
+  }, [orderData, productTier, orderId]);
 
   return (
     <View
@@ -151,6 +159,20 @@ export default function PurchaseSuccessScreen() {
             <IconSymbol name="arrow.down.circle.fill" size={20} color="#FFFFFF" />
             <Text style={styles.primaryBtnText}>View My Downloads</Text>
           </Pressable>
+
+          {productTier === 'premium' && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.chatBtn,
+                { backgroundColor: '#1e3a5f' },
+                pressed && { opacity: 0.85 },
+              ]}
+              onPress={() => router.replace('/(tabs)/chat' as any)}
+            >
+              <Text style={{ fontSize: 18 }}>⚓</Text>
+              <Text style={styles.chatBtnText}>Chat with Captain Bob</Text>
+            </Pressable>
+          )}
 
           <Pressable
             style={({ pressed }) => [
@@ -359,5 +381,18 @@ const styles = StyleSheet.create({
   secondaryBtnText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  chatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 14,
+  },
+  chatBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

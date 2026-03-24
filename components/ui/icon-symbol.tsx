@@ -46,6 +46,10 @@ const MAPPING = {
   "trash.fill": "delete",
   "xmark": "close",
   "star": "star-border",
+  "message.fill": "chat",
+  "clock": "access-time",
+  "arrow.clockwise": "refresh",
+  "checkmark": "check",
 } as unknown as IconMapping;
 
 /**

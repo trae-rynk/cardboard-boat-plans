@@ -1,10 +1,13 @@
 import { and, avg, count, desc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
+  chatEntitlements,
+  chatMessages,
   downloads,
   orders,
   reviews,
   users,
+  type InsertChatEntitlement,
   type InsertDownload,
   type InsertOrder,
   type InsertReview,
@@ -344,4 +347,130 @@ export async function verifyOrderReviewToken(orderId: number, token: string) {
     )
     .limit(1);
   return rows[0] ?? null;
+}
+
+// ─── Chat Entitlements ────────────────────────────────────────────────────────
+
+const CHAT_WINDOW_DAYS = 30;
+const CHAT_MESSAGE_LIMIT = 1000;
+
+/** Create a new chat entitlement for a Premium order (called at purchase confirmation) */
+export async function createChatEntitlement(orderId: number, email: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + CHAT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const chatToken = crypto.randomBytes(32).toString("hex");
+
+  const data: InsertChatEntitlement = {
+    orderId,
+    email,
+    chatToken,
+    startsAt: now,
+    expiresAt,
+    messageCount: 0,
+    messageLimit: CHAT_MESSAGE_LIMIT,
+    extensionCount: 0,
+    status: "active",
+  };
+
+  const result = await db.insert(chatEntitlements).values(data);
+  return { id: (result as any)[0].insertId as number, chatToken };
+}
+
+/** Look up an entitlement by its secure token */
+export async function getEntitlementByToken(chatToken: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(chatEntitlements)
+    .where(eq(chatEntitlements.chatToken, chatToken))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** Look up an entitlement by orderId */
+export async function getEntitlementByOrderId(orderId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(chatEntitlements)
+    .where(eq(chatEntitlements.orderId, orderId))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** Increment message count and auto-expire if over limit */
+export async function incrementChatMessageCount(entitlementId: number, currentCount: number, limit: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const newCount = currentCount + 1;
+  await db
+    .update(chatEntitlements)
+    .set({
+      messageCount: newCount,
+      ...(newCount >= limit ? { status: "expired" as const } : {}),
+    })
+    .where(eq(chatEntitlements.id, entitlementId));
+}
+
+/** Extend an entitlement by 30 more days and reset message count */
+export async function extendChatEntitlement(entitlementId: number, currentExpiresAt: Date) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // If already expired (past date), extend from now; otherwise extend from current expiry
+  const base = currentExpiresAt < new Date() ? new Date() : currentExpiresAt;
+  const newExpiresAt = new Date(base.getTime() + CHAT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+  const rows = await db
+    .select()
+    .from(chatEntitlements)
+    .where(eq(chatEntitlements.id, entitlementId))
+    .limit(1);
+  const current = rows[0];
+  if (!current) throw new Error("Entitlement not found");
+
+  await db
+    .update(chatEntitlements)
+    .set({
+      expiresAt: newExpiresAt,
+      messageCount: 0,
+      status: "active" as const,
+      extensionCount: current.extensionCount + 1,
+    })
+    .where(eq(chatEntitlements.id, entitlementId));
+
+  return newExpiresAt;
+}
+
+// ─── Chat Messages ────────────────────────────────────────────────────────────
+
+/** Save a single chat message (user or assistant) */
+export async function saveChatMessage(
+  entitlementId: number,
+  role: "user" | "assistant",
+  content: string
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(chatMessages).values({ entitlementId, role, content });
+  return (result as any)[0].insertId as number;
+}
+
+/** Retrieve the last N messages for context window (most recent first) */
+export async function getChatHistory(entitlementId: number, limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select()
+    .from(chatMessages)
+    .where(eq(chatMessages.entitlementId, entitlementId))
+    .orderBy(desc(chatMessages.createdAt))
+    .limit(limit);
+  // Return in chronological order for display
+  return rows.reverse();
 }

@@ -106,3 +106,50 @@ export const reviews = mysqlTable("reviews", {
 
 export type Review = typeof reviews.$inferSelect;
 export type InsertReview = typeof reviews.$inferInsert;
+
+/**
+ * Chat entitlements — tracks a customer's Captain Bob support window.
+ * Created when a Premium order is confirmed. Can be extended by purchasing
+ * the $9.99 extension SKU, which pushes expiresAt forward 30 days.
+ */
+export const chatEntitlements = mysqlTable("chatEntitlements", {
+  id: int("id").autoincrement().primaryKey(),
+  /** The original Premium order that created this entitlement */
+  orderId: int("orderId").notNull(),
+  /** Customer email (from the order) */
+  email: varchar("email", { length: 320 }).notNull(),
+  /** Token used to authenticate chat requests (same as guestReviewToken pattern) */
+  chatToken: varchar("chatToken", { length: 128 }).notNull().unique(),
+  /** When the current window started */
+  startsAt: timestamp("startsAt").notNull(),
+  /** When the current window expires (startsAt + 30 days, extended on renewal) */
+  expiresAt: timestamp("expiresAt").notNull(),
+  /** Total messages sent in the current window */
+  messageCount: int("messageCount").default(0).notNull(),
+  /** Max messages allowed per window */
+  messageLimit: int("messageLimit").default(1000).notNull(),
+  /** Number of 30-day extensions purchased */
+  extensionCount: int("extensionCount").default(0).notNull(),
+  status: mysqlEnum("status", ["active", "expired", "suspended"]).default("active").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ChatEntitlement = typeof chatEntitlements.$inferSelect;
+export type InsertChatEntitlement = typeof chatEntitlements.$inferInsert;
+
+/**
+ * Chat messages — full conversation history per entitlement.
+ * Stored so Captain Bob has context for follow-up questions.
+ */
+export const chatMessages = mysqlTable("chatMessages", {
+  id: int("id").autoincrement().primaryKey(),
+  entitlementId: int("entitlementId").notNull(),
+  /** 'user' = customer message, 'assistant' = Captain Bob reply */
+  role: mysqlEnum("role", ["user", "assistant"]).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = typeof chatMessages.$inferInsert;
