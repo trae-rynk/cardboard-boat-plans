@@ -364,7 +364,7 @@ async function sendReviewRequestEmail({
     productTier === "premium" ? "Premium Cardboard Boat Package" : "Builder Plan Package";
 
   // Deep link back into the app's review screen
-  const appBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://championcardboardboatplans.com";
+  const appBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://championcardboardboats.com";
   const reviewUrl = `${appBaseUrl}/review?orderId=${orderId}&token=${guestReviewToken}`;
 
   const html = `
@@ -383,7 +383,7 @@ async function sendReviewRequestEmail({
           <!-- Header -->
           <tr>
             <td style="background:#1e3a5f;padding:32px 40px;text-align:center;">
-              <p style="margin:0;color:#f59e0b;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Champion Cardboard Boat Plans</p>
+              <p style="margin:0;color:#f59e0b;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Champion Cardboard Boats</p>
               <h1 style="margin:12px 0 0;color:#ffffff;font-size:26px;font-weight:800;line-height:1.3;">How did your build go? 🏆</h1>
             </td>
           </tr>
@@ -419,7 +419,7 @@ async function sendReviewRequestEmail({
           <tr>
             <td style="background:#f9fafb;padding:24px 40px;border-top:1px solid #e5e7eb;">
               <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
-                © 2026 Champion Cardboard Boat Plans. All Rights Reserved.
+                © 2026 Champion Cardboard Boats. All Rights Reserved.
               </p>
             </td>
           </tr>
@@ -432,7 +432,7 @@ async function sendReviewRequestEmail({
   `.trim();
 
   await resend.emails.send({
-    from: "Champion Cardboard Boat Plans <noreply@championcardboardboatplans.com>",
+    from: "Champion Cardboard Boats <noreply@championcardboardboats.com>",
     to: email,
     subject: `How did your ${productName} build go? ⭐`,
     html,
