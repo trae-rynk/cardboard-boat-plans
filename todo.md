@@ -111,3 +111,4 @@
 - [x] Replace Builder Plan Package card image with Cover2A.jpg on Home and Product Detail screens
 - [x] Add WIP.png (build-in-progress) to gallery slot 2 on Product Detail screen
 - [x] Add manus1.webp (finished red boat) to gallery slot 3 on Product Detail screen
+- [x] Add FB_IMG_12.jpg as Race Day Action Photo in Build Examples section

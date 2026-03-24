@@ -17,6 +17,7 @@ const HERO_IMAGE = require('@/assets/images/hero1.jpg');
 const BOAT1_IMAGE = require('@/assets/images/cover2a.jpg');
 const WIP_IMAGE = { uri: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663440726246/3jSuK5LFpDyoiJhrkZmbR9/wip_92e8a8c4.png' };
 const MANUS1_IMAGE = require('@/assets/images/manus1.webp');
+const RACEDAY_IMAGE = require('@/assets/images/raceday.jpg');
 
 export default function ProductDetailScreen() {
   const { tier } = useLocalSearchParams<{ tier: string }>();
@@ -157,10 +158,12 @@ export default function ProductDetailScreen() {
             iconSize={28}
           />
           <View style={{ height: 12 }} />
-          <ImagePlaceholder
-            height={180}
-            label="Race Day Action Photo"
-            iconSize={28}
+          <Image
+            source={RACEDAY_IMAGE}
+            style={{ width: '100%', height: 180, borderRadius: 12 }}
+            contentFit="cover"
+            transition={200}
+            accessibilityLabel="Race day action photo"
           />
         </View>
 
