@@ -112,3 +112,5 @@
 - [x] Add WIP.png (build-in-progress) to gallery slot 2 on Product Detail screen
 - [x] Add manus1.webp (finished red boat) to gallery slot 3 on Product Detail screen
 - [x] Add FB_IMG_12.jpg as Race Day Action Photo in Build Examples section
+- [x] Add Winner1.jpg as Finished Boat Example Photo in Build Examples section
+- [x] Add IMG_20170704_151324.jpg as 4th gallery slot on Product Detail screen
