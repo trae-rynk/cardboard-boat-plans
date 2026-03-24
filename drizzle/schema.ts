@@ -39,6 +39,13 @@ export const orders = mysqlTable("orders", {
   /** Stripe client secret (temporary, used during checkout) */
   stripeClientSecret: varchar("stripeClientSecret", { length: 512 }),
   status: mysqlEnum("status", ["pending", "paid", "failed", "refunded"]).default("pending").notNull(),
+  /**
+   * Secure token that allows the purchaser to submit a review without signing in.
+   * Generated at order creation, sent in the follow-up review email.
+   */
+  guestReviewToken: varchar("guestReviewToken", { length: 128 }),
+  /** Timestamp when the 5-day follow-up review email was sent (null = not yet sent) */
+  reviewEmailSentAt: timestamp("reviewEmailSentAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -73,14 +80,14 @@ export type InsertDownload = typeof downloads.$inferInsert;
 
 /**
  * Reviews table — verified-purchaser ratings and written reviews.
- * One review per user per product tier. Linked to a paid order.
+ * One review per order. No sign-in required — verified by orderId + guestReviewToken.
  */
 export const reviews = mysqlTable("reviews", {
   id: int("id").autoincrement().primaryKey(),
-  /** The user who wrote the review */
-  userId: int("userId").notNull(),
   /** The order that qualifies this review as a verified purchase */
   orderId: int("orderId").notNull(),
+  /** Email of the reviewer (from the order) */
+  email: varchar("email", { length: 320 }).notNull(),
   /** Which product tier is being reviewed */
   productTier: mysqlEnum("productTier", ["basic", "premium"]).notNull(),
   /** Star rating 1–5 */
@@ -89,7 +96,7 @@ export const reviews = mysqlTable("reviews", {
   title: varchar("title", { length: 120 }),
   /** Optional written review body */
   body: text("body"),
-  /** Display name shown on the review (defaults to user name) */
+  /** Display name shown on the review (buyer can choose what name to show) */
   displayName: varchar("displayName", { length: 100 }),
   /** Whether the review is visible publicly */
   isPublished: boolean("isPublished").default(true).notNull(),

@@ -189,13 +189,16 @@ function DownloadCard({ download, colors }: DownloadCardProps) {
   // Only show review button on the first asset per order (avoid duplicates)
   const isFirstAsset = download.assetType === 'pdf_plans';
 
-  const { data: canReviewData } = trpc.reviews.canReview.useQuery(
-    { productTier },
+  // Fetch the order's guestReviewToken so the review button can deep-link correctly
+  const { data: orderData } = trpc.orders.getOrder.useQuery(
+    { orderId: download.order.id },
     { enabled: isFirstAsset }
   );
+  const guestReviewToken = orderData?.guestReviewToken ?? '';
+
   const { data: myReview } = trpc.reviews.myReview.useQuery(
-    { productTier },
-    { enabled: isFirstAsset && !!canReviewData?.canReview }
+    { orderId: download.order.id, guestReviewToken },
+    { enabled: isFirstAsset && !!guestReviewToken }
   );
   const resolveToken = trpc.downloads.resolveToken.useQuery(
     { token: download.token },
@@ -313,7 +316,7 @@ function DownloadCard({ download, colors }: DownloadCardProps) {
       </Pressable>
 
       {/* Write / Edit Review Button (shown only on pdf_plans asset) */}
-      {isFirstAsset && canReviewData?.canReview && (
+      {isFirstAsset && !!guestReviewToken && (
         <Pressable
           style={({ pressed }) => [
             styles.reviewBtn,
@@ -321,7 +324,7 @@ function DownloadCard({ download, colors }: DownloadCardProps) {
             pressed && { opacity: 0.75 },
           ]}
           onPress={() =>
-            router.push({ pathname: '/write-review', params: { tier: productTier } } as any)
+            router.push({ pathname: '/write-review', params: { orderId: download.order.id, token: guestReviewToken } } as any)
           }
         >
           {myReview ? (

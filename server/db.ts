@@ -1,7 +1,17 @@
-import { eq } from "drizzle-orm";
+import { and, avg, count, desc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import {
+  downloads,
+  orders,
+  reviews,
+  users,
+  type InsertDownload,
+  type InsertOrder,
+  type InsertReview,
+  type InsertUser,
+} from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import crypto from "crypto";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -89,17 +99,17 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
-
 // ─── Orders ──────────────────────────────────────────────────────────────────
-import { desc } from "drizzle-orm";
-import { orders, downloads, type InsertOrder, type InsertDownload } from "../drizzle/schema";
-import crypto from "crypto";
 
 export async function createOrder(data: InsertOrder) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(orders).values(data);
+  // Auto-generate a guestReviewToken if not provided
+  const orderData: InsertOrder = {
+    ...data,
+    guestReviewToken: data.guestReviewToken ?? crypto.randomBytes(32).toString("hex"),
+  };
+  const result = await db.insert(orders).values(orderData);
   return (result as any)[0].insertId as number;
 }
 
@@ -123,6 +133,15 @@ export async function updateOrderStatus(
     .where(eq(orders.id, id));
 }
 
+export async function markReviewEmailSent(orderId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .update(orders)
+    .set({ reviewEmailSentAt: new Date() })
+    .where(eq(orders.id, orderId));
+}
+
 export async function getOrdersByEmail(email: string) {
   const db = await getDb();
   if (!db) return [];
@@ -133,6 +152,23 @@ export async function getOrdersByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+}
+
+/** Get all paid orders that haven't had a review email sent yet and are at least 5 days old */
+export async function getOrdersDueForReviewEmail() {
+  const db = await getDb();
+  if (!db) return [];
+  const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+  return db
+    .select()
+    .from(orders)
+    .where(
+      and(
+        eq(orders.status, "paid"),
+        sql`${orders.reviewEmailSentAt} IS NULL`,
+        sql`${orders.createdAt} <= ${fiveDaysAgo}`
+      )
+    );
 }
 
 // ─── Downloads ───────────────────────────────────────────────────────────────
@@ -211,8 +247,6 @@ export async function getDownloadsForUser(userId: number) {
 }
 
 // ─── Reviews ─────────────────────────────────────────────────────────────────
-import { and, avg, count, sql } from "drizzle-orm";
-import { reviews, type InsertReview } from "../drizzle/schema";
 
 export async function createReview(data: InsertReview) {
   const db = await getDb();
@@ -223,7 +257,7 @@ export async function createReview(data: InsertReview) {
 
 export async function updateReview(
   id: number,
-  userId: number,
+  orderId: number,
   data: { rating: number; title?: string | null; body?: string | null; displayName?: string | null }
 ) {
   const db = await getDb();
@@ -231,13 +265,13 @@ export async function updateReview(
   await db
     .update(reviews)
     .set({ ...data, updatedAt: new Date() })
-    .where(and(eq(reviews.id, id), eq(reviews.userId, userId)));
+    .where(and(eq(reviews.id, id), eq(reviews.orderId, orderId)));
 }
 
-export async function deleteReview(id: number, userId: number) {
+export async function deleteReview(id: number, orderId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.delete(reviews).where(and(eq(reviews.id, id), eq(reviews.userId, userId)));
+  await db.delete(reviews).where(and(eq(reviews.id, id), eq(reviews.orderId, orderId)));
 }
 
 export async function getReviewsByProductTier(
@@ -256,13 +290,13 @@ export async function getReviewsByProductTier(
     .offset(offset);
 }
 
-export async function getReviewByUserAndProduct(userId: number, productTier: "basic" | "premium") {
+export async function getReviewByOrderId(orderId: number) {
   const db = await getDb();
   if (!db) return null;
   const rows = await db
     .select()
     .from(reviews)
-    .where(and(eq(reviews.userId, userId), eq(reviews.productTier, productTier)))
+    .where(eq(reviews.orderId, orderId))
     .limit(1);
   return rows[0] ?? null;
 }
@@ -294,20 +328,20 @@ export async function getRatingStats(productTier: "basic" | "premium") {
   };
 }
 
-/** Check if a user has a paid order for a given product tier (verified purchase gate) */
-export async function hasVerifiedPurchase(userId: number, productTier: "basic" | "premium") {
+/** Verify that an orderId + guestReviewToken pair is valid and the order is paid */
+export async function verifyOrderReviewToken(orderId: number, token: string) {
   const db = await getDb();
-  if (!db) return false;
+  if (!db) return null;
   const rows = await db
     .select()
     .from(orders)
     .where(
       and(
-        eq(orders.userId, userId),
-        eq(orders.productTier, productTier),
+        eq(orders.id, orderId),
+        eq(orders.guestReviewToken, token),
         eq(orders.status, "paid")
       )
     )
     .limit(1);
-  return rows.length > 0;
+  return rows[0] ?? null;
 }

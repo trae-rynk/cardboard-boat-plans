@@ -114,3 +114,20 @@
 - [x] Add FB_IMG_12.jpg as Race Day Action Photo in Build Examples section
 - [x] Add Winner1.jpg as Finished Boat Example Photo in Build Examples section
 - [x] Add IMG_20170704_151324.jpg as 4th gallery slot on Product Detail screen
+
+## Post-Purchase Review Collection (Option 3)
+- [x] Redesign review system to be order-based (no sign-in required)
+- [x] Add guestReviewToken to orders table for anonymous review access
+- [x] Update review schema: replace userId with orderId + email + guestToken
+- [x] Update tRPC review.submit to accept orderId + guestToken (no auth required)
+- [x] Update tRPC review.myReview to work by orderId (no auth required)
+- [x] Build in-app RateProductModal component (star picker + optional text + submit)
+- [x] Show RateProductModal on Purchase Success screen after 1.5-second delay
+- [x] Add "Rate Your Purchase" button on Purchase Success screen as secondary action
+- [x] Set up Resend email service for transactional email
+- [x] Add reviewEmailSentAt column to orders table
+- [x] Build sendReviewRequestEmail server function (HTML email with review link)
+- [x] Build scheduleReviewEmail function: schedules 5-day follow-up for any order
+- [x] Wire scheduleReviewEmail into confirmPayment flow (all SKUs)
+- [x] write-review.tsx accepts orderId+token params (deep link target from email)
+- [x] Test full flow: purchase → in-app prompt → email at day 5 → review submitted

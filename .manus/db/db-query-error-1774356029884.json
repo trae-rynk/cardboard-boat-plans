@@ -1,0 +1,8 @@
+{
+  "query": "\n-- Add guestReviewToken column to orders table (if not exists)\nALTER TABLE orders ADD COLUMN IF NOT EXISTS guestReviewToken varchar(128);\nALTER TABLE orders ADD COLUMN IF NOT EXISTS reviewEmailSentAt timestamp;\n\n-- Migrate reviews table: drop userId FK, add email column\n-- First check if userId exists and email doesn't\nALTER TABLE reviews ADD COLUMN IF NOT EXISTS email varchar(320) NOT NULL DEFAULT '';\nALTER TABLE reviews DROP COLUMN IF EXISTS userId;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XrsiWnaBQUzdtU.root --database 3jSuK5LFpDyoiJhrkZmbR9 --execute \n-- Add guestReviewToken column to orders table (if not exists)\nALTER TABLE orders ADD COLUMN IF NOT EXISTS guestReviewToken varchar(128);\nALTER TABLE orders ADD COLUMN IF NOT EXISTS reviewEmailSentAt timestamp;\n\n-- Migrate reviews table: drop userId FK, add email column\n-- First check if userId exists and email doesn't\nALTER TABLE reviews ADD COLUMN IF NOT EXISTS email varchar(320) NOT NULL DEFAULT '';\nALTER TABLE reviews DROP COLUMN IF EXISTS userId;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 8200 (HY000) at line 9: can't drop column userid with composite index covered or Primary Key covered now"
+  ]
+}

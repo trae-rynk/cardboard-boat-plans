@@ -17,7 +17,6 @@ import * as Haptics from 'expo-haptics';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { StarRatingPicker } from '@/components/star-rating';
 import { useColors } from '@/hooks/use-colors';
-import { useAuth } from '@/hooks/use-auth';
 import { trpc } from '@/lib/trpc';
 import { PRODUCTS, type ProductTier } from '@/constants/products';
 
@@ -30,27 +29,39 @@ const RATING_LABELS: Record<number, string> = {
 };
 
 export default function WriteReviewScreen() {
-  const { tier } = useLocalSearchParams<{ tier: string }>();
+  const { orderId: orderIdParam, token, tier } = useLocalSearchParams<{
+    orderId: string;
+    token: string;
+    tier?: string;
+  }>();
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, isAuthenticated } = useAuth();
 
-  const productTier = (tier as ProductTier) ?? 'basic';
-  const product = PRODUCTS[productTier];
-  const accentColor = productTier === 'premium' ? colors.accent : colors.primary;
+  const orderId = Number(orderIdParam);
+  const guestReviewToken = token ?? '';
 
   const [rating, setRating] = useState(0);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [displayName, setDisplayName] = useState(user?.name ?? '');
+  const [displayName, setDisplayName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load existing review if the user already left one
+  // Load the order to get product tier and check token validity
+  const { data: order, isLoading: loadingOrder } = trpc.orders.getOrder.useQuery(
+    { orderId },
+    { enabled: !!orderId && !!guestReviewToken }
+  );
+
+  const productTier = (order?.productTier ?? tier ?? 'basic') as ProductTier;
+  const product = PRODUCTS[productTier];
+  const accentColor = productTier === 'premium' ? colors.accent : colors.primary;
+
+  // Load existing review for this order
   const { data: existingReview, isLoading: loadingExisting } =
     trpc.reviews.myReview.useQuery(
-      { productTier },
-      { enabled: isAuthenticated }
+      { orderId, guestReviewToken },
+      { enabled: !!orderId && !!guestReviewToken }
     );
 
   useEffect(() => {
@@ -58,7 +69,7 @@ export default function WriteReviewScreen() {
       setRating(existingReview.rating);
       setTitle(existingReview.title ?? '');
       setBody(existingReview.body ?? '');
-      setDisplayName(existingReview.displayName ?? user?.name ?? '');
+      setDisplayName(existingReview.displayName ?? '');
     }
   }, [existingReview]);
 
@@ -67,6 +78,45 @@ export default function WriteReviewScreen() {
 
   const isEditing = !!existingReview;
   const isValid = rating >= 1 && rating <= 5;
+
+  // Guard: missing params
+  if (!orderId || !guestReviewToken) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Pressable onPress={() => router.back()} style={styles.closeBtn}>
+            <IconSymbol name="xmark" size={20} color={colors.foreground} />
+          </Pressable>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Write a Review</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <View style={styles.centered}>
+          <IconSymbol name="exclamationmark.triangle.fill" size={48} color={colors.warning} />
+          <Text style={[styles.gateTitle, { color: colors.foreground }]}>Invalid Review Link</Text>
+          <Text style={[styles.gateBody, { color: colors.muted }]}>
+            This review link is invalid or has expired. Please use the link from your purchase confirmation or follow-up email.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (loadingOrder || loadingExisting) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Pressable onPress={() => router.back()} style={styles.closeBtn}>
+            <IconSymbol name="xmark" size={20} color={colors.foreground} />
+          </Pressable>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Write a Review</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <View style={styles.centered}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      </View>
+    );
+  }
 
   async function handleSubmit() {
     if (!isValid) {
@@ -80,7 +130,8 @@ export default function WriteReviewScreen() {
     setIsSubmitting(true);
     try {
       await submitReview.mutateAsync({
-        productTier,
+        orderId,
+        guestReviewToken,
         rating,
         title: title.trim() || undefined,
         body: body.trim() || undefined,
@@ -90,7 +141,7 @@ export default function WriteReviewScreen() {
       // Invalidate reviews cache so the list refreshes
       await utils.reviews.list.invalidate({ productTier });
       await utils.reviews.stats.invalidate({ productTier });
-      await utils.reviews.myReview.invalidate({ productTier });
+      await utils.reviews.myReview.invalidate({ orderId, guestReviewToken });
 
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -111,44 +162,6 @@ export default function WriteReviewScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Pressable onPress={() => router.back()} style={styles.closeBtn}>
-            <IconSymbol name="xmark" size={20} color={colors.foreground} />
-          </Pressable>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Write a Review</Text>
-          <View style={{ width: 36 }} />
-        </View>
-        <View style={styles.centered}>
-          <IconSymbol name="person.fill" size={48} color={colors.muted} />
-          <Text style={[styles.gateTitle, { color: colors.foreground }]}>Sign In Required</Text>
-          <Text style={[styles.gateBody, { color: colors.muted }]}>
-            You need to be signed in to leave a review.
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  if (loadingExisting) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Pressable onPress={() => router.back()} style={styles.closeBtn}>
-            <IconSymbol name="xmark" size={20} color={colors.foreground} />
-          </Pressable>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Write a Review</Text>
-          <View style={{ width: 36 }} />
-        </View>
-        <View style={styles.centered}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
-      </View>
-    );
   }
 
   return (
@@ -276,8 +289,7 @@ export default function WriteReviewScreen() {
             <Text style={[styles.guidelinesText, { color: colors.muted }]}>
               • Focus on your experience with the plans and building process{'\n'}
               • Be specific — mention what worked and what you'd improve{'\n'}
-              • Keep it respectful and constructive{'\n'}
-              • Only reviews from verified purchasers are accepted
+              • Keep it respectful and helpful for other builders
             </Text>
           </View>
         </ScrollView>
@@ -286,9 +298,9 @@ export default function WriteReviewScreen() {
       {/* Submit Button */}
       <View
         style={[
-          styles.footer,
+          styles.submitBar,
           {
-            backgroundColor: colors.surface,
+            backgroundColor: colors.background,
             borderTopColor: colors.border,
             paddingBottom: insets.bottom + 12,
           },
@@ -297,11 +309,11 @@ export default function WriteReviewScreen() {
         <Pressable
           style={({ pressed }) => [
             styles.submitBtn,
-            { backgroundColor: isValid ? accentColor : colors.border },
+            { backgroundColor: isValid ? accentColor : colors.muted + '44' },
             pressed && isValid && { opacity: 0.85 },
           ]}
           onPress={handleSubmit}
-          disabled={!isValid || isSubmitting}
+          disabled={isSubmitting || !isValid}
         >
           {isSubmitting ? (
             <ActivityIndicator color="#FFFFFF" />
@@ -326,10 +338,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 14,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    gap: 8,
   },
   closeBtn: {
     width: 36,
@@ -338,10 +350,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    flex: 1,
     fontSize: 17,
     fontWeight: '700',
-    textAlign: 'center',
   },
   centered: {
     flex: 1,
@@ -353,6 +363,7 @@ const styles = StyleSheet.create({
   gateTitle: {
     fontSize: 20,
     fontWeight: '700',
+    textAlign: 'center',
   },
   gateBody: {
     fontSize: 15,
@@ -392,7 +403,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   optional: {
     fontSize: 13,
@@ -401,33 +412,34 @@ const styles = StyleSheet.create({
   ratingLabel: {
     fontSize: 16,
     fontWeight: '700',
-    marginTop: 4,
+    textAlign: 'center',
   },
   input: {
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
+    lineHeight: 22,
   },
   textarea: {
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
+    lineHeight: 22,
     minHeight: 120,
   },
   charCount: {
     fontSize: 12,
     textAlign: 'right',
-    marginTop: 2,
   },
   guidelines: {
-    padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    gap: 8,
+    padding: 14,
+    gap: 6,
     marginTop: 4,
   },
   guidelinesTitle: {
@@ -438,14 +450,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
   },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  submitBar: {
+    padding: 16,
     borderTopWidth: 1,
-    paddingHorizontal: 20,
-    paddingTop: 12,
   },
   submitBtn: {
     flexDirection: 'row',

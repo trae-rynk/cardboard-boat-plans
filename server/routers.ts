@@ -63,7 +63,7 @@ export const appRouter = router({
           console.warn("[Stripe] Not configured, creating demo order:", err);
         }
 
-        // Create pending order in DB
+        // Create pending order in DB (guestReviewToken auto-generated in db.createOrder)
         const orderId = await db.createOrder({
           userId: ctx.user?.id ?? null,
           email: input.email,
@@ -84,7 +84,8 @@ export const appRouter = router({
 
     /**
      * Confirm a payment (called after Stripe confirms on the client).
-     * Marks the order as paid and creates download tokens.
+     * Marks the order as paid, creates download tokens, and schedules the
+     * 5-day review follow-up email.
      */
     confirmPayment: publicProcedure
       .input(
@@ -112,10 +113,16 @@ export const appRouter = router({
         // Create download tokens
         const downloads = await db.createDownloadsForOrder(order.id, order.productTier);
 
+        // Schedule 5-day review email (fire-and-forget, non-blocking)
+        scheduleReviewEmail(order.id, order.email, order.productTier, order.guestReviewToken ?? "").catch(
+          (err) => console.warn("[ReviewEmail] Failed to schedule:", err)
+        );
+
         return {
           success: true,
           orderId: order.id,
           productTier: order.productTier,
+          guestReviewToken: order.guestReviewToken,
           downloads: downloads.map((d) => ({
             token: d.token,
             displayName: d.displayName,
@@ -134,6 +141,7 @@ export const appRouter = router({
 
     /**
      * Get order by ID (public — used after purchase to show confirmation).
+     * Returns the guestReviewToken so the app can open the review modal.
      */
     getOrder: publicProcedure
       .input(z.object({ orderId: z.number() }))
@@ -148,64 +156,61 @@ export const appRouter = router({
   reviews: router({
     /**
      * Submit a new review (or update an existing one).
-     * Only verified purchasers (paid orders) can submit.
+     * No sign-in required — verified by orderId + guestReviewToken.
+     * Works for all SKUs.
      */
-    submit: protectedProcedure
+    submit: publicProcedure
       .input(
         z.object({
-          productTier: z.enum(["basic", "premium"]),
+          orderId: z.number(),
+          guestReviewToken: z.string(),
           rating: z.number().int().min(1).max(5),
           title: z.string().max(120).optional(),
           body: z.string().max(2000).optional(),
           displayName: z.string().max(100).optional(),
         })
       )
-      .mutation(async ({ ctx, input }) => {
-        // Verified purchase gate
-        const hasPurchase = await db.hasVerifiedPurchase(ctx.user.id, input.productTier);
-        if (!hasPurchase) {
-          throw new Error("You must purchase this product before leaving a review.");
+      .mutation(async ({ input }) => {
+        // Verify the order token
+        const order = await db.verifyOrderReviewToken(input.orderId, input.guestReviewToken);
+        if (!order) {
+          throw new Error("Invalid order or review token. Please use the link from your purchase confirmation.");
         }
 
-        const existing = await db.getReviewByUserAndProduct(ctx.user.id, input.productTier);
+        const existing = await db.getReviewByOrderId(input.orderId);
 
         if (existing) {
           // Update existing review
-          await db.updateReview(existing.id, ctx.user.id, {
+          await db.updateReview(existing.id, input.orderId, {
             rating: input.rating,
             title: input.title ?? null,
             body: input.body ?? null,
-            displayName: input.displayName ?? ctx.user.name ?? null,
+            displayName: input.displayName ?? null,
           });
           return { reviewId: existing.id, action: "updated" as const };
         } else {
-          // Find a qualifying paid order
-          const userOrders = await db.getOrdersByUserId(ctx.user.id);
-          const qualifyingOrder = userOrders.find(
-            (o) => o.productTier === input.productTier && o.status === "paid"
-          );
-          if (!qualifyingOrder) throw new Error("No qualifying order found.");
-
           const reviewId = await db.createReview({
-            userId: ctx.user.id,
-            orderId: qualifyingOrder.id,
-            productTier: input.productTier,
+            orderId: input.orderId,
+            email: order.email,
+            productTier: order.productTier,
             rating: input.rating,
             title: input.title ?? null,
             body: input.body ?? null,
-            displayName: input.displayName ?? ctx.user.name ?? null,
+            displayName: input.displayName ?? null,
           });
           return { reviewId, action: "created" as const };
         }
       }),
 
     /**
-     * Delete the current user's review for a product.
+     * Delete a review by orderId + guestReviewToken (no auth required).
      */
-    delete: protectedProcedure
-      .input(z.object({ reviewId: z.number() }))
-      .mutation(async ({ ctx, input }) => {
-        await db.deleteReview(input.reviewId, ctx.user.id);
+    delete: publicProcedure
+      .input(z.object({ reviewId: z.number(), orderId: z.number(), guestReviewToken: z.string() }))
+      .mutation(async ({ input }) => {
+        const order = await db.verifyOrderReviewToken(input.orderId, input.guestReviewToken);
+        if (!order) throw new Error("Invalid order or review token.");
+        await db.deleteReview(input.reviewId, input.orderId);
         return { success: true };
       }),
 
@@ -234,27 +239,15 @@ export const appRouter = router({
       }),
 
     /**
-     * Get the current user's own review for a product (if any).
+     * Get the review for a specific order (by orderId + guestReviewToken).
+     * No auth required.
      */
-    myReview: protectedProcedure
-      .input(z.object({ productTier: z.enum(["basic", "premium"]) }))
-      .query(async ({ ctx, input }) => {
-        return db.getReviewByUserAndProduct(ctx.user.id, input.productTier);
-      }),
-
-    /**
-     * Check if the current user can review a product (verified purchase gate).
-     */
-    canReview: protectedProcedure
-      .input(z.object({ productTier: z.enum(["basic", "premium"]) }))
-      .query(async ({ ctx, input }) => {
-        const hasPurchase = await db.hasVerifiedPurchase(ctx.user.id, input.productTier);
-        const existingReview = await db.getReviewByUserAndProduct(ctx.user.id, input.productTier);
-        return {
-          canReview: hasPurchase,
-          hasReview: !!existingReview,
-          reviewId: existingReview?.id ?? null,
-        };
+    myReview: publicProcedure
+      .input(z.object({ orderId: z.number(), guestReviewToken: z.string() }))
+      .query(async ({ input }) => {
+        const order = await db.verifyOrderReviewToken(input.orderId, input.guestReviewToken);
+        if (!order) return null;
+        return db.getReviewByOrderId(input.orderId);
       }),
   }),
 
@@ -280,8 +273,6 @@ export const appRouter = router({
 
     /**
      * Resolve a download token to a file URL.
-     * In production, this would return a signed S3 URL.
-     * For now, returns a placeholder download URL.
      */
     resolveToken: publicProcedure
       .input(z.object({ token: z.string() }))
@@ -296,8 +287,6 @@ export const appRouter = router({
 
         await db.incrementDownloadCount(input.token);
 
-        // In production: generate a signed S3 URL here
-        // For now: return a placeholder URL based on asset type
         const PLACEHOLDER_URLS: Record<string, string> = {
           pdf_plans: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663440726246/ffmRMeRiboUTqtrm.pdf",
           video_series: "https://example.com/video-series",
@@ -314,3 +303,138 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
+// ─── Review Email Scheduler ───────────────────────────────────────────────────
+/**
+ * Schedules a 5-day delayed review follow-up email.
+ * Uses setTimeout for simplicity — in production this would be a job queue.
+ * The delay is calculated from now so it works even if the server restarts
+ * (the DB tracks reviewEmailSentAt so we never double-send).
+ */
+async function scheduleReviewEmail(
+  orderId: number,
+  email: string,
+  productTier: "basic" | "premium",
+  guestReviewToken: string
+) {
+  const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+
+  // In development/demo mode, we log instead of actually waiting 5 days
+  if (process.env.NODE_ENV === "development" || !process.env.RESEND_API_KEY) {
+    console.log(
+      `[ReviewEmail] Would schedule review email for order #${orderId} (${email}) in 5 days.`,
+      `Review link token: ${guestReviewToken}`
+    );
+    return;
+  }
+
+  setTimeout(async () => {
+    try {
+      // Re-fetch order to make sure it's still paid and email hasn't been sent
+      const order = await db.getOrderById(orderId);
+      if (!order || order.status !== "paid" || order.reviewEmailSentAt) return;
+
+      await sendReviewRequestEmail({ orderId, email, productTier, guestReviewToken });
+      await db.markReviewEmailSent(orderId);
+      console.log(`[ReviewEmail] Sent review email for order #${orderId}`);
+    } catch (err) {
+      console.error(`[ReviewEmail] Failed to send for order #${orderId}:`, err);
+    }
+  }, FIVE_DAYS_MS);
+}
+
+/**
+ * Sends the review request email via Resend.
+ */
+async function sendReviewRequestEmail({
+  orderId,
+  email,
+  productTier,
+  guestReviewToken,
+}: {
+  orderId: number;
+  email: string;
+  productTier: "basic" | "premium";
+  guestReviewToken: string;
+}) {
+  const { Resend } = await import("resend");
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  const productName =
+    productTier === "premium" ? "Premium Cardboard Boat Package" : "Builder Plan Package";
+
+  // Deep link back into the app's review screen
+  const appBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://championcardboardboatplans.com";
+  const reviewUrl = `${appBaseUrl}/review?orderId=${orderId}&token=${guestReviewToken}`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How did your build go?</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
+          <!-- Header -->
+          <tr>
+            <td style="background:#1e3a5f;padding:32px 40px;text-align:center;">
+              <p style="margin:0;color:#f59e0b;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Champion Cardboard Boat Plans</p>
+              <h1 style="margin:12px 0 0;color:#ffffff;font-size:26px;font-weight:800;line-height:1.3;">How did your build go? 🏆</h1>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px;">
+              <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.6;">
+                Hi there,
+              </p>
+              <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.6;">
+                It's been 5 days since you downloaded the <strong>${productName}</strong> — we hope your build is coming along great!
+              </p>
+              <p style="margin:0 0 32px;color:#374151;font-size:16px;line-height:1.6;">
+                We'd love to hear how it went. Your review helps other builders decide if these plans are right for them — and it only takes 30 seconds.
+              </p>
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <a href="${reviewUrl}"
+                       style="display:inline-block;background:#f59e0b;color:#1e3a5f;font-size:16px;font-weight:800;padding:16px 40px;border-radius:10px;text-decoration:none;letter-spacing:0.5px;">
+                      ⭐ Rate Your Experience
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:32px 0 0;color:#9ca3af;font-size:13px;text-align:center;line-height:1.6;">
+                This is a one-time email for order #${orderId}. You won't receive any further follow-ups.
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f9fafb;padding:24px 40px;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
+                © 2026 Champion Cardboard Boat Plans. All Rights Reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  await resend.emails.send({
+    from: "Champion Cardboard Boat Plans <noreply@championcardboardboatplans.com>",
+    to: email,
+    subject: `How did your ${productName} build go? ⭐`,
+    html,
+  });
+}

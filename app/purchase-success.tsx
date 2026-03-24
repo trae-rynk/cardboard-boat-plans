@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Text, View, Pressable, StyleSheet, Animated, Platform } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Text, View, Pressable, StyleSheet, Animated, Platform, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -7,6 +7,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/hooks/use-colors';
 import { PRODUCTS, type ProductTier } from '@/constants/products';
 import { trpc } from '@/lib/trpc';
+import { RateProductModal } from '@/components/rate-product-modal';
 
 export default function PurchaseSuccessScreen() {
   const { orderId, productTier } = useLocalSearchParams<{
@@ -19,6 +20,9 @@ export default function PurchaseSuccessScreen() {
 
   const product = PRODUCTS[(productTier as ProductTier) ?? 'basic'];
   const accentColor = productTier === 'premium' ? colors.accent : colors.primary;
+
+  // Rating modal state
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
 
   // Animation
   const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -40,97 +44,137 @@ export default function PurchaseSuccessScreen() {
         duration: 300,
         useNativeDriver: true,
       }),
-    ]).start();
+    ]).start(() => {
+      // Show the rating prompt 1.5s after the success animation completes
+      setTimeout(() => setRatingModalVisible(true), 1500);
+    });
   }, []);
+
+  const { data: orderData } = trpc.orders.getOrder.useQuery(
+    { orderId: Number(orderId) },
+    { enabled: !!orderId }
+  );
 
   const { data: downloads } = trpc.downloads.forOrder.useQuery(
     { orderId: Number(orderId) },
     { enabled: !!orderId }
   );
 
+  const guestReviewToken = orderData?.guestReviewToken ?? '';
+
   return (
     <View
       style={[
         styles.container,
-        { backgroundColor: colors.background, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 },
+        { backgroundColor: colors.background, paddingTop: insets.top, paddingBottom: insets.bottom },
       ]}
     >
-      {/* Success Icon */}
-      <Animated.View style={[styles.iconContainer, { transform: [{ scale: scaleAnim }] }]}>
-        <View style={[styles.iconCircle, { backgroundColor: colors.success + '18' }]}>
-          <IconSymbol name="checkmark.circle.fill" size={80} color={colors.success} />
-        </View>
-      </Animated.View>
-
-      {/* Heading */}
-      <Animated.View style={[styles.textBlock, { opacity: fadeAnim }]}>
-        <Text style={[styles.heading, { color: colors.foreground }]}>Purchase Complete!</Text>
-        <Text style={[styles.subheading, { color: colors.muted }]}>
-          Thank you for your purchase. Your files are ready to download.
-        </Text>
-
-        {/* Order Details */}
-        <View style={[styles.orderCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={styles.orderRow}>
-            <Text style={[styles.orderLabel, { color: colors.muted }]}>Product</Text>
-            <Text style={[styles.orderValue, { color: colors.foreground }]}>{product.name}</Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Success Icon */}
+        <Animated.View style={[styles.iconContainer, { transform: [{ scale: scaleAnim }] }]}>
+          <View style={[styles.iconCircle, { backgroundColor: colors.success + '18' }]}>
+            <IconSymbol name="checkmark.circle.fill" size={80} color={colors.success} />
           </View>
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <View style={styles.orderRow}>
-            <Text style={[styles.orderLabel, { color: colors.muted }]}>Order ID</Text>
-            <Text style={[styles.orderValue, { color: colors.foreground }]}>#{orderId}</Text>
-          </View>
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <View style={styles.orderRow}>
-            <Text style={[styles.orderLabel, { color: colors.muted }]}>Amount Paid</Text>
-            <Text style={[styles.orderValueAccent, { color: accentColor }]}>{product.priceDisplay}</Text>
-          </View>
-        </View>
+        </Animated.View>
 
-        {/* Downloads */}
-        {downloads && downloads.length > 0 && (
-          <View style={styles.downloadsSection}>
-            <Text style={[styles.downloadsTitle, { color: colors.foreground }]}>
-              Your Downloads
-            </Text>
-            {downloads.map((dl) => (
-              <DownloadItem
-                key={dl.id}
-                download={dl}
-                accentColor={accentColor}
-                colors={colors}
-                orderId={Number(orderId)}
-              />
-            ))}
+        {/* Heading */}
+        <Animated.View style={[styles.textBlock, { opacity: fadeAnim }]}>
+          <Text style={[styles.heading, { color: colors.foreground }]}>Purchase Complete!</Text>
+          <Text style={[styles.subheading, { color: colors.muted }]}>
+            Thank you for your purchase. Your files are ready to download.
+          </Text>
+
+          {/* Order Details */}
+          <View style={[styles.orderCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.orderRow}>
+              <Text style={[styles.orderLabel, { color: colors.muted }]}>Product</Text>
+              <Text style={[styles.orderValue, { color: colors.foreground }]}>{product.name}</Text>
+            </View>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={styles.orderRow}>
+              <Text style={[styles.orderLabel, { color: colors.muted }]}>Order ID</Text>
+              <Text style={[styles.orderValue, { color: colors.foreground }]}>#{orderId}</Text>
+            </View>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={styles.orderRow}>
+              <Text style={[styles.orderLabel, { color: colors.muted }]}>Amount Paid</Text>
+              <Text style={[styles.orderValueAccent, { color: accentColor }]}>{product.priceDisplay}</Text>
+            </View>
           </View>
-        )}
-      </Animated.View>
 
-      {/* Actions */}
-      <Animated.View style={[styles.actions, { opacity: fadeAnim }]}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.primaryBtn,
-            { backgroundColor: accentColor },
-            pressed && { opacity: 0.85 },
-          ]}
-          onPress={() => router.replace('/(tabs)/downloads' as any)}
-        >
-          <IconSymbol name="arrow.down.circle.fill" size={20} color="#FFFFFF" />
-          <Text style={styles.primaryBtnText}>View My Downloads</Text>
-        </Pressable>
+          {/* Downloads */}
+          {downloads && downloads.length > 0 && (
+            <View style={styles.downloadsSection}>
+              <Text style={[styles.downloadsTitle, { color: colors.foreground }]}>
+                Your Downloads
+              </Text>
+              {downloads.map((dl) => (
+                <DownloadItem
+                  key={dl.id}
+                  download={dl}
+                  accentColor={accentColor}
+                  colors={colors}
+                />
+              ))}
+            </View>
+          )}
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.secondaryBtn,
-            { borderColor: colors.border },
-            pressed && { opacity: 0.7 },
-          ]}
-          onPress={() => router.replace('/')}
-        >
-          <Text style={[styles.secondaryBtnText, { color: colors.muted }]}>Back to Home</Text>
-        </Pressable>
-      </Animated.View>
+          {/* Rate Now button (secondary CTA — in case they dismiss the modal) */}
+          {!!guestReviewToken && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.rateNowBtn,
+                { borderColor: accentColor, backgroundColor: accentColor + '10' },
+                pressed && { opacity: 0.75 },
+              ]}
+              onPress={() => setRatingModalVisible(true)}
+            >
+              <IconSymbol name="star.fill" size={16} color={accentColor} />
+              <Text style={[styles.rateNowText, { color: accentColor }]}>Rate Your Purchase</Text>
+            </Pressable>
+          )}
+        </Animated.View>
+
+        {/* Actions */}
+        <Animated.View style={[styles.actions, { opacity: fadeAnim }]}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.primaryBtn,
+              { backgroundColor: accentColor },
+              pressed && { opacity: 0.85 },
+            ]}
+            onPress={() => router.replace('/(tabs)/downloads' as any)}
+          >
+            <IconSymbol name="arrow.down.circle.fill" size={20} color="#FFFFFF" />
+            <Text style={styles.primaryBtnText}>View My Downloads</Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.secondaryBtn,
+              { borderColor: colors.border },
+              pressed && { opacity: 0.7 },
+            ]}
+            onPress={() => router.replace('/')}
+          >
+            <Text style={[styles.secondaryBtnText, { color: colors.muted }]}>Back to Home</Text>
+          </Pressable>
+        </Animated.View>
+      </ScrollView>
+
+      {/* In-app rating modal */}
+      {!!guestReviewToken && (
+        <RateProductModal
+          visible={ratingModalVisible}
+          onClose={() => setRatingModalVisible(false)}
+          orderId={Number(orderId)}
+          guestReviewToken={guestReviewToken}
+          productTier={(productTier as ProductTier) ?? 'basic'}
+        />
+      )}
     </View>
   );
 }
@@ -145,15 +189,9 @@ interface DownloadItemProps {
   };
   accentColor: string;
   colors: ReturnType<typeof useColors>;
-  orderId: number;
 }
 
 function DownloadItem({ download, accentColor, colors }: DownloadItemProps) {
-  const resolveToken = trpc.downloads.resolveToken.useQuery(
-    { token: download.token },
-    { enabled: false }
-  );
-
   const iconName =
     download.assetType === 'video_series' ? 'play.circle.fill' : 'doc.fill';
 
@@ -182,10 +220,15 @@ function DownloadItem({ download, accentColor, colors }: DownloadItemProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 32,
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 24,
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   iconContainer: {
     alignItems: 'center',
@@ -273,6 +316,21 @@ const styles = StyleSheet.create({
   },
   readyText: {
     fontSize: 12,
+    fontWeight: '700',
+  },
+  rateNowBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  rateNowText: {
+    fontSize: 15,
     fontWeight: '700',
   },
   actions: {

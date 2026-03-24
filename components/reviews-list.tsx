@@ -5,15 +5,10 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
-  Alert,
-  Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { StarRatingDisplay, RatingBar } from '@/components/star-rating';
 import { useColors } from '@/hooks/use-colors';
-import { useAuth } from '@/hooks/use-auth';
 import { trpc } from '@/lib/trpc';
 import type { ProductTier } from '@/constants/products';
 
@@ -40,7 +35,7 @@ export function RatingSummary({ productTier, accentColor }: RatingSummaryProps) 
     return (
       <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Text style={[styles.noReviewsText, { color: colors.muted }]}>
-          No reviews yet. Be the first to review!
+          No reviews yet. Be the first to review after your purchase!
         </Text>
       </View>
     );
@@ -79,24 +74,24 @@ export function RatingSummary({ productTier, accentColor }: RatingSummaryProps) 
 interface ReviewCardProps {
   review: {
     id: number;
-    userId: number;
+    orderId: number;
+    email: string;
+    productTier: 'basic' | 'premium';
     rating: number;
     title: string | null;
     body: string | null;
     displayName: string | null;
+    isPublished: boolean;
     createdAt: Date;
     updatedAt: Date;
   };
-  isOwn?: boolean;
-  onDelete?: () => void;
-  onEdit?: () => void;
 }
 
-export function ReviewCard({ review, isOwn, onDelete, onEdit }: ReviewCardProps) {
+export function ReviewCard({ review }: ReviewCardProps) {
   const colors = useColors();
   const [expanded, setExpanded] = useState(false);
 
-  const name = review.displayName ?? 'Anonymous Builder';
+  const name = review.displayName ?? 'Verified Builder';
   const dateStr = new Date(review.createdAt).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -118,43 +113,12 @@ export function ReviewCard({ review, isOwn, onDelete, onEdit }: ReviewCardProps)
         </View>
 
         <View style={{ flex: 1 }}>
-          <View style={styles.nameRow}>
-            <Text style={[styles.reviewerName, { color: colors.foreground }]}>{name}</Text>
-            {isOwn && (
-              <View style={[styles.ownBadge, { backgroundColor: colors.primary + '18' }]}>
-                <Text style={[styles.ownBadgeText, { color: colors.primary }]}>Your Review</Text>
-              </View>
-            )}
-          </View>
+          <Text style={[styles.reviewerName, { color: colors.foreground }]}>{name}</Text>
           <View style={styles.metaRow}>
             <StarRatingDisplay rating={review.rating} size={13} />
             <Text style={[styles.reviewDate, { color: colors.muted }]}>{dateStr}</Text>
           </View>
         </View>
-
-        {/* Own review actions */}
-        {isOwn && (
-          <View style={styles.ownActions}>
-            {onEdit && (
-              <Pressable
-                onPress={onEdit}
-                style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.6 }]}
-                accessibilityLabel="Edit review"
-              >
-                <IconSymbol name="pencil" size={16} color={colors.primary} />
-              </Pressable>
-            )}
-            {onDelete && (
-              <Pressable
-                onPress={onDelete}
-                style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.6 }]}
-                accessibilityLabel="Delete review"
-              >
-                <IconSymbol name="trash.fill" size={16} color={colors.error} />
-              </Pressable>
-            )}
-          </View>
-        )}
       </View>
 
       {/* Verified badge */}
@@ -194,90 +158,24 @@ interface ReviewsSectionProps {
 
 export function ReviewsSection({ productTier, accentColor }: ReviewsSectionProps) {
   const colors = useColors();
-  const router = useRouter();
-  const { isAuthenticated } = useAuth();
-
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 5;
 
-  const { data: reviews, isLoading, refetch } = trpc.reviews.list.useQuery({
+  const { data: reviews, isLoading } = trpc.reviews.list.useQuery({
     productTier,
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
   });
 
-  const { data: canReviewData } = trpc.reviews.canReview.useQuery(
-    { productTier },
-    { enabled: isAuthenticated }
-  );
-
-  const deleteReview = trpc.reviews.delete.useMutation();
-  const utils = trpc.useUtils();
-
-  async function handleDelete(reviewId: number) {
-    Alert.alert(
-      'Delete Review',
-      'Are you sure you want to delete your review? This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteReview.mutateAsync({ reviewId });
-              await utils.reviews.list.invalidate({ productTier });
-              await utils.reviews.stats.invalidate({ productTier });
-              await utils.reviews.canReview.invalidate({ productTier });
-              if (Platform.OS !== 'web') {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              }
-            } catch (e: any) {
-              Alert.alert('Error', e?.message ?? 'Could not delete review.');
-            }
-          },
-        },
-      ]
-    );
-  }
-
-  function handleWriteReview() {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    router.push({ pathname: '/write-review', params: { tier: productTier } } as any);
-  }
-
   return (
     <View style={styles.section}>
       {/* Section header */}
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Customer Reviews</Text>
-        {isAuthenticated && canReviewData?.canReview && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.writeReviewBtn,
-              { backgroundColor: accentColor },
-              pressed && { opacity: 0.85 },
-            ]}
-            onPress={handleWriteReview}
-          >
-            <IconSymbol name="pencil" size={14} color="#FFFFFF" />
-            <Text style={styles.writeReviewBtnText}>
-              {canReviewData.hasReview ? 'Edit Review' : 'Write a Review'}
-            </Text>
-          </Pressable>
-        )}
-        {isAuthenticated && !canReviewData?.canReview && (
-          <Text style={[styles.purchaseToReview, { color: colors.muted }]}>
-            Purchase to review
-          </Text>
-        )}
-        {!isAuthenticated && (
-          <Text style={[styles.purchaseToReview, { color: colors.muted }]}>
-            Sign in to review
-          </Text>
-        )}
+        <Text style={[styles.sectionTitle, { color: '#1e3a5f' }]}>Customer Reviews</Text>
+        <View style={[styles.verifiedBadge, { backgroundColor: colors.success + '18' }]}>
+          <IconSymbol name="checkmark.seal.fill" size={12} color={colors.success} />
+          <Text style={[styles.verifiedBadgeText, { color: colors.success }]}>Verified Buyers</Text>
+        </View>
       </View>
 
       {/* Rating summary */}
@@ -293,20 +191,8 @@ export function ReviewsSection({ productTier, accentColor }: ReviewsSectionProps
           <IconSymbol name="star" size={32} color={colors.muted} />
           <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Reviews Yet</Text>
           <Text style={[styles.emptyBody, { color: colors.muted }]}>
-            Be the first to share your experience with these plans!
+            Reviews from verified buyers will appear here after purchase.
           </Text>
-          {isAuthenticated && canReviewData?.canReview && (
-            <Pressable
-              style={({ pressed }) => [
-                styles.firstReviewBtn,
-                { backgroundColor: accentColor },
-                pressed && { opacity: 0.85 },
-              ]}
-              onPress={handleWriteReview}
-            >
-              <Text style={styles.writeReviewBtnText}>Write the First Review</Text>
-            </Pressable>
-          )}
         </View>
       ) : (
         <>
@@ -314,15 +200,6 @@ export function ReviewsSection({ productTier, accentColor }: ReviewsSectionProps
             <ReviewCard
               key={review.id}
               review={review}
-              isOwn={canReviewData?.reviewId === review.id}
-              onEdit={
-                canReviewData?.reviewId === review.id ? handleWriteReview : undefined
-              }
-              onDelete={
-                canReviewData?.reviewId === review.id
-                  ? () => handleDelete(review.id)
-                  : undefined
-              }
             />
           ))}
 
@@ -394,6 +271,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     flex: 1,
+    lineHeight: 20,
   },
   reviewCard: {
     borderRadius: 14,
@@ -418,43 +296,18 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
   },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flexWrap: 'wrap',
-  },
-  reviewerName: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  ownBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  ownBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginTop: 2,
   },
+  reviewerName: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
   reviewDate: {
     fontSize: 12,
-  },
-  ownActions: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  actionBtn: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   verifiedRow: {
     flexDirection: 'row',
@@ -493,22 +346,17 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
   },
-  writeReviewBtn: {
+  verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  writeReviewBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
+  verifiedBadgeText: {
+    fontSize: 11,
     fontWeight: '700',
-  },
-  purchaseToReview: {
-    fontSize: 12,
-    fontWeight: '500',
   },
   loadingRow: {
     padding: 24,
@@ -529,12 +377,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
-  },
-  firstReviewBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-    marginTop: 4,
   },
   pagination: {
     flexDirection: 'row',
