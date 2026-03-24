@@ -72,7 +72,7 @@ export const TESTIMONIALS = [
     name: 'Mike T.',
     location: 'Columbus, OH',
     rating: 5,
-    text: 'Used these plans at our city regatta and took first place! The instructions are incredibly clear.',
+    text: "Fantastic boat! Easy to build (especially with Captain Bob's help) - can't wait to race this weekend!"
   },
   {
     id: '2',
