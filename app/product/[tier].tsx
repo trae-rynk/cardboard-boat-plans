@@ -15,6 +15,8 @@ import { trpc } from '@/lib/trpc';
 
 const HERO_IMAGE = require('@/assets/images/hero1.jpg');
 const BOAT1_IMAGE = require('@/assets/images/cover2a.jpg');
+const WIP_IMAGE = { uri: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663440726246/3jSuK5LFpDyoiJhrkZmbR9/wip_92e8a8c4.png' };
+const MANUS1_IMAGE = require('@/assets/images/manus1.webp');
 
 export default function ProductDetailScreen() {
   const { tier } = useLocalSearchParams<{ tier: string }>();
@@ -111,20 +113,21 @@ export default function ProductDetailScreen() {
               transition={200}
               accessibilityLabel="Cardboard boat construction"
             />
-            {/* Remaining gallery slots — add more photos here */}
-            <ImagePlaceholder
-              width={160}
-              height={120}
-              label="Photo 2"
-              iconSize={20}
-              style={{ marginRight: 12, borderRadius: 10 }}
+            {/* Gallery slot 2 — build in progress */}
+            <Image
+              source={WIP_IMAGE}
+              style={{ width: 160, height: 120, borderRadius: 10, marginRight: 12 }}
+              contentFit="cover"
+              transition={200}
+              accessibilityLabel="Building the boat in progress"
             />
-            <ImagePlaceholder
-              width={160}
-              height={120}
-              label="Photo 3"
-              iconSize={20}
-              style={{ marginRight: 12, borderRadius: 10 }}
+            {/* Gallery slot 3 — finished red boat */}
+            <Image
+              source={MANUS1_IMAGE}
+              style={{ width: 160, height: 120, borderRadius: 10, marginRight: 12 }}
+              contentFit="cover"
+              transition={200}
+              accessibilityLabel="Finished red cardboard boat with paddle"
             />
           </ScrollView>
         </View>
