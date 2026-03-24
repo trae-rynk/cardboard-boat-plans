@@ -13,11 +13,10 @@ import { ReviewsSection } from '@/components/reviews-list';
 import { StarRatingDisplay } from '@/components/star-rating';
 import { trpc } from '@/lib/trpc';
 
-const HERO_IMAGE = require('@/assets/images/hero1.jpg');
+const HERO_IMAGE = require('@/assets/images/captain-bob-premium.jpg');
 const BOAT1_IMAGE = require('@/assets/images/cover2a.jpg');
 const WIP_IMAGE = { uri: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663440726246/3jSuK5LFpDyoiJhrkZmbR9/wip_92e8a8c4.png' };
 const MANUS1_IMAGE = require('@/assets/images/manus1.webp');
-const RACEDAY_IMAGE = require('@/assets/images/raceday.jpg');
 const WINNER1_IMAGE = require('@/assets/images/winner1.jpg');
 const RACE2_IMAGE = { uri: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663440726246/3jSuK5LFpDyoiJhrkZmbR9/race2_ef031f43.jpg' };
 
@@ -168,14 +167,6 @@ export default function ProductDetailScreen() {
             contentFit="cover"
             transition={200}
             accessibilityLabel="Winner boat racing on the water"
-          />
-          <View style={{ height: 12 }} />
-          <Image
-            source={RACEDAY_IMAGE}
-            style={{ width: '100%', height: 180, borderRadius: 12 }}
-            contentFit="cover"
-            transition={200}
-            accessibilityLabel="Race day action photo"
           />
         </View>
 

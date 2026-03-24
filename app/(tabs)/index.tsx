@@ -10,7 +10,7 @@ import { PRODUCTS, TESTIMONIALS } from '@/constants/products';
 
 const HERO_IMAGE = require('@/assets/images/hero1.jpg');
 const BASIC_PLANS_IMAGE = require('@/assets/images/cover2a.jpg');
-const UPGRADE_IMAGE = require('@/assets/images/upgrade-premium.jpg');
+const UPGRADE_IMAGE = require('@/assets/images/captain-bob-premium.jpg');
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -74,7 +74,7 @@ export default function HomeScreen() {
               style={{ width: '100%', height: 140 }}
               contentFit="cover"
               transition={200}
-              accessibilityLabel="Cardboard boat construction plans"
+              accessibilityLabel="Cardboard Boat Build Plans cover"
             />
             <View style={styles.productCardBody}>
               <Text style={[styles.productName, { color: colors.foreground }]}>

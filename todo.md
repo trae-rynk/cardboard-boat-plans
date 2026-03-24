@@ -162,3 +162,9 @@
 
 ## Premium Detail Screen Hero Image
 - [x] Use Upgrade.jpg (product.heroImage) as the hero on the Premium product detail screen
+
+## Image Fixes
+- [x] Fix homepage Premium card to show captain-bob-premium.jpg (cache-busted with new filename)
+- [x] Fix homepage Basic card preview to show cover2a.jpg (Cardboard Boat Build Plans cover)
+- [x] Remove raceday.jpg (shirtless boy) from the Build Examples section on both product detail screens
+- [x] raceday.jpg removed from both packages (single shared gallery component)
