@@ -13,7 +13,7 @@ import { ReviewsSection } from '@/components/reviews-list';
 import { StarRatingDisplay } from '@/components/star-rating';
 import { trpc } from '@/lib/trpc';
 
-const HERO_IMAGE = require('@/assets/images/captain-bob-premium.jpg');
+const HERO_IMAGE = require('@/assets/images/cover2a.jpg');
 const BOAT1_IMAGE = require('@/assets/images/cover2a.jpg');
 const WIP_IMAGE = { uri: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663440726246/3jSuK5LFpDyoiJhrkZmbR9/wip_92e8a8c4.png' };
 const MANUS1_IMAGE = require('@/assets/images/manus1.webp');

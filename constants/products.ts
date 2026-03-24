@@ -50,7 +50,7 @@ export const PRODUCTS: Record<ProductTier, Product> = {
     priceDisplay: '$39.99',
     description:
       'The complete award-winning system plus 30 days of live support. Everything in the Basic package PLUS the confidence of knowing Captain Bob is here to help guide you every step of the way.',
-    heroImage: require('../assets/images/upgrade-premium.jpg'),
+    heroImage: require('../assets/images/captain-bob-premium.jpg'),
     features: [
       { text: 'Full-size PDF plan set (12 pages)', included: true },
       { text: 'Fully illustrated step-by-step build diagrams', included: true },
