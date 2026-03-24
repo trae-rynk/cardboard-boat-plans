@@ -10,6 +10,7 @@ import { PRODUCTS, TESTIMONIALS } from '@/constants/products';
 
 const HERO_IMAGE = require('@/assets/images/hero1.jpg');
 const BASIC_PLANS_IMAGE = require('@/assets/images/cover2a.jpg');
+const UPGRADE_IMAGE = require('@/assets/images/upgrade-premium.jpg');
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -109,7 +110,13 @@ export default function HomeScreen() {
             <View style={[styles.bestValueBadge, { backgroundColor: colors.accent }]}>
               <Text style={styles.bestValueText}>⭐ Best Value</Text>
             </View>
-            <ImagePlaceholder height={140} label="Premium Package Preview Image" iconSize={24} />
+            <Image
+              source={UPGRADE_IMAGE}
+              style={{ width: '100%', height: 140 }}
+              contentFit="cover"
+              transition={200}
+              accessibilityLabel="Premium Builder Package with Captain Bob"
+            />
             <View style={styles.productCardBody}>
               <Text style={[styles.productName, { color: colors.foreground }]}>
                 {PRODUCTS.premium.name}
