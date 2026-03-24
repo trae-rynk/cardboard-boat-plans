@@ -5,7 +5,6 @@ import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/screen-container';
 import { ImagePlaceholder } from '@/components/image-placeholder';
 
-import { VideoPlaceholder } from '@/components/video-placeholder';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/hooks/use-colors';
 import { PRODUCTS, type ProductTier } from '@/constants/products';
@@ -142,22 +141,6 @@ export default function ProductDetailScreen() {
           </ScrollView>
         </View>
 
-        {/* Video Preview (Premium only) */}
-        {tier === 'premium' && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>
-              Video Tutorial Preview
-            </Text>
-            <VideoPlaceholder
-              height={200}
-              label="Add Video Tutorial Preview"
-            />
-            <Text style={[styles.videoNote, { color: colors.muted }]}>
-              Full video series (6 videos) unlocked after purchase
-            </Text>
-          </View>
-        )}
-
         {/* Additional Images */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>Build Examples</Text>
@@ -289,11 +272,6 @@ const styles = StyleSheet.create({
   },
   galleryScroll: {
     marginLeft: -4,
-  },
-  videoNote: {
-    fontSize: 13,
-    textAlign: 'center',
-    fontStyle: 'italic',
   },
   stickyBottom: {
     position: 'absolute',

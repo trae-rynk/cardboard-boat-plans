@@ -168,3 +168,6 @@
 - [x] Fix homepage Basic card preview to show cover2a.jpg (Cardboard Boat Build Plans cover)
 - [x] Remove raceday.jpg (shirtless boy) from the Build Examples section on both product detail screens
 - [x] raceday.jpg removed from both packages (single shared gallery component)
+
+## Video Tutorial Removal
+- [x] Remove Video Tutorial Preview section from Premium product detail screen
