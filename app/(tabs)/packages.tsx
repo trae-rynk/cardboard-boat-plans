@@ -1,4 +1,4 @@
-import { ScrollView, Text, View, Pressable, StyleSheet } from 'react-native';
+import { ScrollView, Text, View, Pressable, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -88,8 +88,17 @@ function PackageCard({ product, accentColor, colors, isFeatured, onPress }: Pack
         </View>
       )}
 
+      {/* Hero image (Premium only) */}
+      {product.heroImage && (
+        <Image
+          source={product.heroImage}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+      )}
+
       {/* Card Header */}
-      <View style={[styles.cardHeader, { backgroundColor: accentColor + '12' }]}>
+      <View style={[styles.cardHeader, { backgroundColor: product.heroImage ? 'transparent' : accentColor + '12' }]}>
         <Text style={[styles.packageName, { color: colors.foreground }]}>{product.name}</Text>
         <Text style={[styles.packageTagline, { color: colors.muted }]}>{product.tagline}</Text>
         <Text style={[styles.packagePrice, { color: accentColor }]}>{product.priceDisplay}</Text>
@@ -248,5 +257,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     flex: 1,
+  },
+  heroImage: {
+    width: '100%',
+    height: 180,
   },
 });

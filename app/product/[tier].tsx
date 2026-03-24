@@ -56,13 +56,13 @@ export default function ProductDetailScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {/* Hero Image */}
+        {/* Hero Image — use product-specific image if available, else default */}
         <Image
-          source={HERO_IMAGE}
+          source={product.heroImage ?? HERO_IMAGE}
           style={{ width: '100%', height: 260 }}
           contentFit="cover"
           transition={300}
-          accessibilityLabel="Award-winning cardboard boat racer on the water"
+          accessibilityLabel={product.name}
         />
 
         {/* Product Header */}

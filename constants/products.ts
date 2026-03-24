@@ -1,3 +1,5 @@
+import type { ImageSourcePropType } from 'react-native';
+
 export type ProductTier = 'basic' | 'premium';
 
 export interface ProductFeature {
@@ -15,6 +17,8 @@ export interface Product {
   features: ProductFeature[];
   badge?: string;
   color: string;
+  /** Optional hero image shown on the product card and detail screen */
+  heroImage?: ImageSourcePropType;
 }
 
 export const PRODUCTS: Record<ProductTier, Product> = {
@@ -41,11 +45,12 @@ export const PRODUCTS: Record<ProductTier, Product> = {
   premium: {
     id: 'premium',
     name: 'Premium Builder Package',
-    tagline: 'The complete award-winning system',
+    tagline: 'The complete award-winning system plus 30 days of live support.',
     price: 3999, // cents
     priceDisplay: '$39.99',
     description:
-      'The ultimate cardboard boat building system. Everything in the Basic package PLUS an exclusive video tutorial series, advanced design hacks used by championship winners, and speed optimization secrets. This is the complete system for serious competitors.',
+      'The complete award-winning system plus 30 days of live support. Everything in the Basic package PLUS an exclusive video tutorial series, advanced design hacks used by championship winners, speed optimization secrets, and direct access to Captain Bob — your personal expert — for 30 days.',
+    heroImage: require('../assets/images/upgrade-premium.jpg'),
     features: [
       { text: 'Full-size PDF plan set (12 pages)', included: true },
       { text: 'Materials & tools checklist', included: true },

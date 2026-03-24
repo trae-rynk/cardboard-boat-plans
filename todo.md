@@ -147,3 +147,8 @@
 - [x] Wire extension purchase flow (Stripe intent → confirmExtension → extend entitlement)
 - [x] Add OpenAI GPT stub (returns smart demo responses, activates with OPENAI_API_KEY)
 - [x] Test full flow: Premium purchase → entitlement created → chat works → cap enforced → extension purchase extends window
+
+## Premium Package Card Updates
+- [x] Copy Upgrade.jpg into project assets
+- [x] Use Upgrade.jpg as the main image on the Premium Builder Package card
+- [x] Update Premium description to "The complete award-winning system plus 30 days of live support."
