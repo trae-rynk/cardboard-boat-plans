@@ -236,3 +236,7 @@
 ## Premium Page & Captain Bob Test Mode
 - [x] Bold "plus 30 days of live support" text on premium product page
 - [x] Add dev test mode to unlock Captain Bob without purchase (Expo Go testing)
+
+## Captain Bob Tone & Cockpit FAQ
+- [x] Dial back nautical/pirate tone — keep "Ahoy" only in the intro greeting, clean helpful answers after that
+- [x] Add cockpit construction detail to system prompt FAQ (floor from top panel, soft-insert side walls, Panel A as front/back cockpit walls and bow/stern, Panel B cutouts creating the cockpit cavity)

@@ -643,8 +643,18 @@ Final check: No exposed cardboard edges, all seams sealed, no visible gaps or op
 4. Over-taping the exterior. Taping the entire boat surface is banned at most races. Tape seams only.
 5. Discarding the cockpit cutout. Keep it — it becomes the cockpit floor.
 
+## COCKPIT CONSTRUCTION — DETAILED EXPLANATION
+The cockpit is a recessed cavity in the top of the boat where the paddler sits. Here is exactly how it is constructed:
+- The cockpit FLOOR is the 18" x 30" piece cut out from the top panel (Step 4). Keep this piece — it drops in as the floor of the cockpit cavity.
+- The cockpit SIDE WALLS are the two 30" x 6" panels listed in the parts list. These have no slots. They are soft-inserted (placed in, not locked) in Step 1 alongside the internal skeleton, one on each side of the cockpit area, parallel to the center spines.
+- The cockpit FRONT and BACK WALLS are the two innermost Panel A's. The four Panel A's are positioned at both ends of the skeleton (two at the bow end, two at the stern end). The two innermost A panels (closest to the center) form the front and back walls of the cockpit cavity.
+- Panel B's (the four center panels) have a rectangular cutout on their top edge — this is what creates the open cockpit cavity. Panel B's are 34" x 12" with a rectangular center section (18" wide) and angled sides.
+- Panel A's (at the ends) have no top cutout — they are solid hexagonal panels. The two innermost A's contain the cockpit front-to-back, and the two outermost A's form the bow and stern starting points of the hull shape.
+
+Summary: The cockpit is a box formed by: Panel B cutouts on top (open cavity), cockpit side walls on the sides, the two innermost Panel A's front and back, and the cockpit floor panel dropped in from above.
+
 ## TONE & STYLE
-Friendly, encouraging, and practical. Occasional nautical flavor is welcome but keep it light. Keep answers concise — 3–5 sentences for simple questions, a short numbered list for multi-step processes. If someone asks about something unrelated to these specific plans or boat building, politely redirect. Always refer to yourself as Captain Bob. Never invent dimensions or steps not listed above — if unsure, tell the customer to refer to the specific page in their plans.`;
+You are friendly, encouraging, and practical. Use plain, clear English — no nautical slang, pirate speak, or sailing metaphors after your greeting. Do not use "Ahoy", "Arr", "matey", "sea legs", "landlubber", "set sail", "batten down", or similar phrases in your responses. Keep answers concise — 3–5 sentences for simple questions, a short numbered list for multi-step processes. If someone asks about something unrelated to these specific plans or boat building, politely redirect. Always refer to yourself as Captain Bob. Never invent dimensions or steps not listed above — if unsure, tell the customer to refer to the specific page in their plans.`;
 
       const messages = [
         { role: "system" as const, content: SYSTEM_PROMPT },
@@ -659,31 +669,31 @@ Friendly, encouraging, and practical. Occasional nautical flavor is welcome but 
         temperature: 0.7,
       });
 
-      return completion.choices[0]?.message?.content ?? "Arr, I seem to have lost my sea legs for a moment. Please try again!";
+      return completion.choices[0]?.message?.content ?? "I ran into a technical issue. Please try sending your message again.";
     } catch (err) {
       console.error("[CaptainBob] OpenAI error:", err);
-      return "Arr, I'm having a bit of trouble with my radio right now. Please try again in a moment!";
+      return "I'm having a technical issue right now. Please try again in a moment.";
     }
   }
 
   // ── Stub path (no API key — returns helpful demo responses) ─────────────
   const lower = userMessage.toLowerCase();
   if (lower.includes("waterproof") || lower.includes("seal")) {
-    return "Ahoy! For waterproofing, I recommend 3 coats of exterior polyurethane spray on all seams and the hull bottom. Let each coat dry fully (about 2 hours) before the next. Pay extra attention to the bow — that's where water pressure is highest in a race. 🚢";
+    return "For waterproofing, triple-tape all exterior seams with duct tape, then apply 2 coats of Kilz exterior primer followed by at least 3 coats of exterior latex paint. Let each coat dry fully before the next. Pay extra attention to the bottom panel and bow — those areas take the most water pressure.";
   }
   if (lower.includes("tape") || lower.includes("duct")) {
-    return "Great question! Gorilla tape is my top pick — it bonds better to cardboard than standard duct tape and holds up under water pressure. Use it on all external seams. For interior reinforcement, standard duct tape works fine and saves a few dollars. 🏆";
+    return "Standard duct tape works well for all seams and reinforcement. Triple-tape all exterior seams for best results. Most races do not allow you to tape the entire exterior surface — tape is for seams and joints only.";
   }
   if (lower.includes("cardboard") || lower.includes("material")) {
-    return "For the hull panels, use double-wall corrugated cardboard (the thicker kind from appliance boxes). Single-wall works for interior bracing but not the hull. Hardware stores sometimes give away appliance boxes for free — worth asking! 📦";
+    return "Double-wall corrugated cardboard is strongly recommended, especially for the hull and center spines. Single-wall can work for interior bracing panels. Check neighborhood Facebook groups or appliance/furniture stores for free large boxes — they receive big shipments regularly.";
   }
   if (lower.includes("how long") || lower.includes("time") || lower.includes("weekend")) {
-    return "Most builders complete the hull in one weekend — about 8-10 hours total. Day 1: cut and assemble the panels. Day 2: tape all seams, waterproof, and let it cure overnight. I'd recommend doing a quick float test in a bathtub before race day! ⏱️";
+    return "Most builders complete the boat in one weekend — about 8-10 hours total. Day 1: cut and assemble the skeleton and panels. Day 2: tape all seams, apply primer and paint, and let it cure overnight. A quick float test before race day is a good idea.";
   }
   if (lower.includes("race") || lower.includes("competition") || lower.includes("win")) {
-    return "Race day tips from an 8-time champion: (1) Keep your crew weight centered and low. (2) Practice your paddle stroke before the race. (3) Bring extra tape for last-minute repairs. (4) Smile for the crowd — half the judges score on showmanship! 🏅";
+    return "Race day tips: (1) Keep your crew weight centered and low. (2) Practice your paddle stroke before the race. (3) Bring extra duct tape for last-minute repairs. (4) Many races score on showmanship — have fun with the crowd!";
   }
-  return `Ahoy! I'm Captain Bob, your Champion Cardboard Boats support expert. I'm here to help you build a winning boat! Ask me anything about construction techniques, materials, waterproofing, or race strategy. What would you like to know? ⚓`;
+  return "Ahoy! I'm Captain Bob, your Champion Cardboard Boats support expert. I'm here to help you build a winning boat. Ask me anything about construction, materials, waterproofing, or race day. What would you like to know?";
 }
 
 // ─── Review Email Scheduler ───────────────────────────────────────────────────
