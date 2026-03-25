@@ -175,3 +175,6 @@
 ## Premium Live Support Highlight
 - [x] Bold and visually distinguish the "30 days of live Captain Bob support" feature in the What's Included list
 - [x] Add a Captain Bob callout section on the Premium detail screen to emphasize live support as the key upgrade reason
+
+## Checkout No-Refunds Notice
+- [x] Add "No refunds on digital downloads" notice to checkout screen before the Pay button

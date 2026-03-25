@@ -263,7 +263,7 @@ export default function CheckoutScreen() {
           )}
         </Pressable>
         <Text style={[styles.refundNote, { color: colors.muted }]}>
-          30-day money-back guarantee
+          🔒 All sales are final. Digital downloads are non-refundable.
         </Text>
       </View>
     </View>
