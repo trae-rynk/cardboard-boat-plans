@@ -14,7 +14,8 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { useStripe } from '@stripe/stripe-react-native';
+import { useStripePayment } from '@/lib/stripe-payment';
+import { isExpoGo } from '@/lib/is-expo-go';
 import { ScreenContainer } from '@/components/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/hooks/use-colors';
@@ -26,7 +27,7 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const stripePayment = useStripePayment();
 
   const product = PRODUCTS[(tier as ProductTier) ?? 'basic'];
   const accentColor = tier === 'premium' ? colors.accent : colors.primary;
@@ -71,47 +72,24 @@ export default function CheckoutScreen() {
         return;
       }
 
-      // Step 2: Initialise the Payment Sheet with the client secret
-      const { error: initError } = await initPaymentSheet({
-        merchantDisplayName: 'Champion Cardboard Boats',
-        paymentIntentClientSecret: intentResult.clientSecret,
-        defaultBillingDetails: { email: email.trim() },
-        appearance: {
-          colors: {
-            primary: accentColor,
-            background: colors.background,
-            componentBackground: colors.surface,
-            componentBorder: colors.border,
-            componentDivider: colors.border,
-            primaryText: colors.foreground,
-            secondaryText: colors.muted,
-            componentText: colors.foreground,
-            placeholderText: colors.muted,
-          },
-        },
-        applePay: {
-          merchantCountryCode: 'US',
-        },
-        googlePay: {
-          merchantCountryCode: 'US',
-          testEnv: true,
-        },
+      // Step 2 & 3: Present the Stripe Payment Sheet
+      const { error: paymentError } = await stripePayment.presentPaymentSheet({
+        clientSecret: intentResult.clientSecret,
+        email: email.trim(),
+        accentColor,
+        backgroundColor: colors.background,
+        surfaceColor: colors.surface,
+        borderColor: colors.border,
+        foregroundColor: colors.foreground,
+        mutedColor: colors.muted,
       });
 
-      if (initError) {
-        throw new Error(initError.message);
-      }
-
-      // Step 3: Present the Payment Sheet to the user
-      const { error: presentError } = await presentPaymentSheet();
-
-      if (presentError) {
-        if (presentError.code === 'Canceled') {
-          // User dismissed — not an error, just stop processing
+      if (paymentError) {
+        if (paymentError.code === 'Canceled') {
           setIsProcessing(false);
           return;
         }
-        throw new Error(presentError.message);
+        throw new Error(paymentError.message);
       }
 
       // Step 4: Payment confirmed by Stripe — tell our server
@@ -183,6 +161,16 @@ export default function CheckoutScreen() {
               <Text style={[styles.orderTotalPrice, { color: accentColor }]}>{product.priceDisplay}</Text>
             </View>
           </View>
+
+          {/* Expo Go notice — payment not available in Expo Go */}
+          {isExpoGo && (
+            <View style={[styles.expoGoNotice, { backgroundColor: colors.warning + '18', borderColor: colors.warning + '55' }]}>
+              <Text style={[styles.expoGoNoticeTitle, { color: colors.foreground }]}>Payment Available in Published App</Text>
+              <Text style={[styles.expoGoNoticeBody, { color: colors.muted }]}>
+                Secure payments require the published app and cannot run in Expo Go. All other features work normally here. The full payment flow will be available once the app is published.
+              </Text>
+            </View>
+          )}
 
           {/* Email — needed before opening Payment Sheet */}
           <View style={styles.formSection}>
@@ -501,5 +489,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'center',
     paddingBottom: 4,
+  },
+  expoGoNotice: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 14,
+    gap: 6,
+  },
+  expoGoNoticeTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  expoGoNoticeBody: {
+    fontSize: 13,
+    lineHeight: 19,
   },
 });

@@ -18,6 +18,7 @@ import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
 import { trpc, createTRPCClient } from "@/lib/trpc";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
+import { isExpoGo } from "@/lib/is-expo-go";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -26,9 +27,11 @@ export const unstable_settings = {
   anchor: "(tabs)",
 };
 
-// StripeProvider wrapper — native only, excluded on web via platform-specific file
+// StripeProvider wrapper — native only, excluded on web and Expo Go
+// Stripe React Native requires a custom dev/production build; it crashes in Expo Go.
 function StripeWrapper({ children }: { children: React.ReactNode }) {
-  if (Platform.OS === "web") {
+  if (Platform.OS === "web" || isExpoGo) {
+    // In Expo Go or web: skip StripeProvider entirely — checkout will show a graceful message
     return <>{children}</>;
   }
   // Lazy require so Metro doesn't attempt to bundle stripe on web

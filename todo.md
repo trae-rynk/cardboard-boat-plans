@@ -225,3 +225,10 @@
 ## Captain Bob System Prompt Tuning
 - [x] Rewrite system prompt with owner-provided expert knowledge (waterproofing, skeleton engineering, box sourcing)
 - [x] Embed full plan content: all 6 build steps, complete parts list with dimensions, panel templates, common mistakes
+
+## Bug: Expo Go QR Code Errors (4 errors, app won't open on device)
+- [x] Identify the four errors from Metro/server logs (all Stripe native module crashes)
+- [x] Fix: added isExpoGo guard to StripeWrapper in _layout.tsx
+- [x] Fix: replaced direct useStripe import in checkout.tsx with useStripePayment abstraction
+- [x] Fix: added Expo Go notice banner in checkout UI so payment degradation is clear
+- [x] Fix: added Stripe web stub via Metro resolver alias (already done previously)
