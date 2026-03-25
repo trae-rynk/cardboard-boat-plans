@@ -240,3 +240,7 @@
 ## Captain Bob Tone & Cockpit FAQ
 - [x] Dial back nautical/pirate tone — keep "Ahoy" only in the intro greeting, clean helpful answers after that
 - [x] Add cockpit construction detail to system prompt FAQ (floor from top panel, soft-insert side walls, Panel A as front/back cockpit walls and bow/stern, Panel B cutouts creating the cockpit cavity)
+
+## Final Publish-Ready Checkpoint
+- [x] Revert Metro resolver to all-platform Stripe stub (Expo Go stable)
+- [x] Save final publish-ready checkpoint

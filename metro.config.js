@@ -4,18 +4,18 @@ const path = require("path");
 
 const config = getDefaultConfig(__dirname);
 
-// Alias @stripe/stripe-react-native to a stub on all platforms.
+// Alias @stripe/stripe-react-native to a stub on all platforms during development.
 //
 // WHY: Stripe React Native uses native TurboModules (OnrampSdk, etc.) that must be
 // compiled into the app binary. In Expo Go these modules are absent and the package
 // crashes at module-load time — before any JS runtime guard can run.
 //
-// The stub returns a graceful no-op. The real Stripe payment sheet is only invoked
-// in the published app build where the native modules are present.
+// The stub returns graceful no-ops. The checkout screen shows a clear
+// "Payment available in the published app" banner when running in Expo Go.
 //
-// In the published build, app.config.ts includes the @stripe/stripe-react-native
-// plugin which compiles the native modules in, so the stub is never reached there.
-// (Metro resolver is only used during development / Expo Go.)
+// In the PUBLISHED BUILD, the @stripe/stripe-react-native Expo plugin
+// (configured in app.config.ts) compiles the real native modules into the binary,
+// so Stripe works fully in the production APK/IPA.
 const stripeStub = path.resolve(__dirname, "lib/stripe-web-stub.ts");
 const originalResolver = config.resolver?.resolveRequest;
 config.resolver = config.resolver ?? {};
