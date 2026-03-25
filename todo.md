@@ -205,3 +205,8 @@
 ## Privacy Policy Page
 - [x] Create app/privacy-policy.tsx screen with full privacy policy
 - [x] Link privacy policy from checkout footer and home screen footer
+
+## Bundle CDN Images Locally
+- [x] Copy wip.png (build-in-progress photo) from CDN to local assets
+- [x] Copy race2.jpg (race day action photo) from CDN to local assets
+- [x] Update product detail screen to use local require() instead of CDN URIs

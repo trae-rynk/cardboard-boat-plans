@@ -14,10 +14,10 @@ import { trpc } from '@/lib/trpc';
 
 const HERO_IMAGE = require('@/assets/images/cover2a.jpg');
 const BOAT1_IMAGE = require('@/assets/images/cover2a.jpg');
-const WIP_IMAGE = { uri: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663440726246/3jSuK5LFpDyoiJhrkZmbR9/wip_92e8a8c4.png' };
+const WIP_IMAGE = { uri: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663440726246/3jSuK5LFpDyoiJhrkZmbR9/wip_bf98aa83.png' };
 const MANUS1_IMAGE = require('@/assets/images/manus1.webp');
 const WINNER1_IMAGE = require('@/assets/images/winner1.jpg');
-const RACE2_IMAGE = { uri: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663440726246/3jSuK5LFpDyoiJhrkZmbR9/race2_ef031f43.jpg' };
+const RACE2_IMAGE = { uri: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663440726246/3jSuK5LFpDyoiJhrkZmbR9/race2_27c6e6f2.jpg' };
 
 export default function ProductDetailScreen() {
   const { tier } = useLocalSearchParams<{ tier: string }>();
