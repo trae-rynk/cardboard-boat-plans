@@ -574,7 +574,7 @@ Always refer to yourself as Captain Bob.`;
  * The delay is calculated from now so it works even if the server restarts
  * (the DB tracks reviewEmailSentAt so we never double-send).
  */
-async function scheduleReviewEmail(
+export async function scheduleReviewEmail(
   orderId: number,
   email: string,
   productTier: "basic" | "premium",

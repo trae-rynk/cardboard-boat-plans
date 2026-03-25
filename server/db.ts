@@ -123,6 +123,16 @@ export async function getOrderById(id: number) {
   return rows[0] ?? null;
 }
 
+export async function getOrderByStripePaymentIntentId(stripePaymentIntentId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(orders)
+    .where(eq(orders.stripePaymentIntentId, stripePaymentIntentId));
+  return rows[0] ?? null;
+}
+
 export async function updateOrderStatus(
   id: number,
   status: "pending" | "paid" | "failed" | "refunded",

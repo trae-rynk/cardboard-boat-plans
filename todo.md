@@ -190,3 +190,10 @@
 - [x] Replace simulated checkout form with Stripe Payment Sheet
 - [x] Support Apple Pay / Google Pay via Payment Sheet (enabled automatically)
 - [ ] Test full payment flow with Stripe test cards (use 4242 4242 4242 4242 / any future date / any CVC)
+
+## Stripe Webhook
+- [x] Add STRIPE_WEBHOOK_SECRET as a secret (user must add via Secrets panel after creating webhook in Stripe)
+- [x] Build POST /webhook endpoint with raw body parsing and Stripe signature verification
+- [x] Handle payment_intent.succeeded: fulfill order, create downloads, schedule review email, create chat entitlement (Premium)
+- [x] Handle payment_intent.payment_failed: mark order as failed
+- [x] Prevent duplicate fulfillment (idempotency guard on order status)
