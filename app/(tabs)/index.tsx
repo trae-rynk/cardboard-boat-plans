@@ -124,6 +124,11 @@ export default function HomeScreen() {
               <Text style={[styles.productTagline, { color: colors.muted }]}>
                 {PRODUCTS.premium.tagline}
               </Text>
+              {/* Captain Bob live support callout */}
+              <View style={[styles.captainBobStrip, { backgroundColor: '#1B4F8A' }]}>
+                <Text style={styles.captainBobStripText}>⚓  Includes 30-day live Captain Bob support
+                </Text>
+              </View>
               <View style={styles.productCardFooter}>
                 <Text style={[styles.productPrice, { color: colors.accent }]}>
                   {PRODUCTS.premium.priceDisplay}
@@ -417,5 +422,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     textAlign: 'center',
+  },
+  captainBobStrip: {
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 8,
+    marginBottom: 2,
+  },
+  captainBobStripText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
 });

@@ -178,3 +178,6 @@
 
 ## Checkout No-Refunds Notice
 - [x] Add "No refunds on digital downloads" notice to checkout screen before the Pay button
+
+## Homepage Premium Card Callout
+- [x] Add Captain Bob "Includes 30-day live support" callout to Premium package card on homepage
