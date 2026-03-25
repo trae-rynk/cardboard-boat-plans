@@ -46,6 +46,8 @@ export const orders = mysqlTable("orders", {
   guestReviewToken: varchar("guestReviewToken", { length: 128 }),
   /** Timestamp when the 5-day follow-up review email was sent (null = not yet sent) */
   reviewEmailSentAt: timestamp("reviewEmailSentAt"),
+  /** Timestamp when the review email is scheduled to be sent (createdAt + 5 days) */
+  reviewEmailScheduledAt: timestamp("reviewEmailScheduledAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

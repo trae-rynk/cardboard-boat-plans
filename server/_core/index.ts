@@ -7,6 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { handleStripeWebhook } from "../webhook";
+import { startReviewEmailPoller } from "../routers";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -89,3 +90,6 @@ async function startServer() {
 }
 
 startServer().catch(console.error);
+
+// Start the review email poller (checks every hour for orders due for review emails)
+startReviewEmailPoller();

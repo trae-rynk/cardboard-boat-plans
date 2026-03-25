@@ -569,41 +569,57 @@ Always refer to yourself as Captain Bob.`;
 
 // ─── Review Email Scheduler ───────────────────────────────────────────────────
 /**
- * Schedules a 5-day delayed review follow-up email.
- * Uses setTimeout for simplicity — in production this would be a job queue.
- * The delay is calculated from now so it works even if the server restarts
- * (the DB tracks reviewEmailSentAt so we never double-send).
+ * Called at order confirmation — the scheduledAt time is already written to the
+ * DB by createOrder (5 days from now). This function is now a no-op kept for
+ * backwards compatibility; the poller handles actual delivery.
  */
 export async function scheduleReviewEmail(
   orderId: number,
   email: string,
-  productTier: "basic" | "premium",
-  guestReviewToken: string
+  _productTier: "basic" | "premium",
+  _guestReviewToken: string
 ) {
-  const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+  // The reviewEmailScheduledAt timestamp was set in createOrder.
+  // The poller (startReviewEmailPoller) handles actual sending.
+  console.log(`[ReviewEmail] Order #${orderId} (${email}) scheduled for review email in 5 days.`);
+}
 
-  // In development/demo mode, we log instead of actually waiting 5 days
-  if (process.env.NODE_ENV === "development" || !process.env.RESEND_API_KEY) {
-    console.log(
-      `[ReviewEmail] Would schedule review email for order #${orderId} (${email}) in 5 days.`,
-      `Review link token: ${guestReviewToken}`
-    );
-    return;
+/**
+ * Starts a polling loop that runs every hour and sends review emails
+ * for any paid orders whose reviewEmailScheduledAt has passed.
+ * Survives server restarts because the schedule is persisted in the DB.
+ */
+export function startReviewEmailPoller() {
+  const POLL_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+
+  async function poll() {
+    if (!process.env.RESEND_API_KEY) return; // skip if email not configured
+    try {
+      const due = await db.getOrdersDueForReviewEmail();
+      for (const order of due) {
+        if (!order.guestReviewToken) continue;
+        try {
+          await sendReviewRequestEmail({
+            orderId: order.id,
+            email: order.email,
+            productTier: order.productTier,
+            guestReviewToken: order.guestReviewToken,
+          });
+          await db.markReviewEmailSent(order.id);
+          console.log(`[ReviewEmail] Sent review email for order #${order.id} (${order.email})`);
+        } catch (err) {
+          console.error(`[ReviewEmail] Failed to send for order #${order.id}:`, err);
+        }
+      }
+    } catch (err) {
+      console.error("[ReviewEmail] Poller error:", err);
+    }
   }
 
-  setTimeout(async () => {
-    try {
-      // Re-fetch order to make sure it's still paid and email hasn't been sent
-      const order = await db.getOrderById(orderId);
-      if (!order || order.status !== "paid" || order.reviewEmailSentAt) return;
-
-      await sendReviewRequestEmail({ orderId, email, productTier, guestReviewToken });
-      await db.markReviewEmailSent(orderId);
-      console.log(`[ReviewEmail] Sent review email for order #${orderId}`);
-    } catch (err) {
-      console.error(`[ReviewEmail] Failed to send for order #${orderId}:`, err);
-    }
-  }, FIVE_DAYS_MS);
+  // Run once at startup, then every hour
+  poll();
+  setInterval(poll, POLL_INTERVAL_MS);
+  console.log("[ReviewEmail] Poller started (interval: 1 hour).");
 }
 
 /**
@@ -626,9 +642,14 @@ async function sendReviewRequestEmail({
   const productName =
     productTier === "premium" ? "Premium Cardboard Boat Package" : "Builder Plan Package";
 
-  // Deep link back into the app's review screen
-  const appBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://championcardboardboats.com";
-  const reviewUrl = `${appBaseUrl}/review?orderId=${orderId}&token=${guestReviewToken}`;
+  // App deep link — opens the write-review screen directly in the installed app.
+  // The app scheme is derived from the bundle ID timestamp: manus20260315120445
+  const APP_SCHEME = process.env.EXPO_APP_SCHEME ?? "manus20260315120445";
+  const webFallbackBase = process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://championcardboardboats.com";
+  // Deep link: tries to open the app first, falls back to the web redirect page
+  const appDeepLink = `${APP_SCHEME}://write-review?orderId=${orderId}&token=${guestReviewToken}`;
+  // Web fallback: a redirect page that attempts the deep link, then shows the web form
+  const reviewUrl = `${webFallbackBase}/review-redirect?orderId=${orderId}&token=${guestReviewToken}&deepLink=${encodeURIComponent(appDeepLink)}`;
 
   const html = `
 <!DOCTYPE html>

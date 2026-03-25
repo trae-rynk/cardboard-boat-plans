@@ -210,3 +210,10 @@
 - [x] Copy wip.png (build-in-progress photo) from CDN to local assets
 - [x] Copy race2.jpg (race day action photo) from CDN to local assets
 - [x] Update product detail screen to use local require() instead of CDN URIs
+
+## Review Email Deep-Link & 5-Day Scheduling
+- [x] Update review email CTA button to use app deep link (manus20260315120445://write-review?orderId=X&token=Y)
+- [x] Add web fallback URL so email still works if app is not installed
+- [x] Create app/review-redirect.tsx web landing page that tries to open app, falls back to in-browser review form
+- [x] Fix 5-day email scheduling: replace fragile setTimeout with DB-persisted scheduled_at column + polling approach
+- [x] Confirm scheduleReviewEmail fires correctly in production (not just dev)

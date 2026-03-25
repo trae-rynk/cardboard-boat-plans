@@ -108,9 +108,12 @@ export async function createOrder(data: InsertOrder) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   // Auto-generate a guestReviewToken if not provided
+  // Schedule review email 5 days from now
+  const fiveDaysFromNow = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
   const orderData: InsertOrder = {
     ...data,
     guestReviewToken: data.guestReviewToken ?? crypto.randomBytes(32).toString("hex"),
+    reviewEmailScheduledAt: data.reviewEmailScheduledAt ?? fiveDaysFromNow,
   };
   const result = await db.insert(orders).values(orderData);
   return (result as any)[0].insertId as number;
@@ -167,11 +170,11 @@ export async function getOrdersByUserId(userId: number) {
   return db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
 }
 
-/** Get all paid orders that haven't had a review email sent yet and are at least 5 days old */
+/** Get all paid orders whose review email is due (scheduledAt <= now, not yet sent) */
 export async function getOrdersDueForReviewEmail() {
   const db = await getDb();
   if (!db) return [];
-  const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+  const now = new Date();
   return db
     .select()
     .from(orders)
@@ -179,7 +182,8 @@ export async function getOrdersDueForReviewEmail() {
       and(
         eq(orders.status, "paid"),
         sql`${orders.reviewEmailSentAt} IS NULL`,
-        sql`${orders.createdAt} <= ${fiveDaysAgo}`
+        sql`${orders.reviewEmailScheduledAt} IS NOT NULL`,
+        sql`${orders.reviewEmailScheduledAt} <= ${now}`
       )
     );
 }
