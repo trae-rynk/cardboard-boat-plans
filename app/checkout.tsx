@@ -272,6 +272,13 @@ export default function CheckoutScreen() {
           >
             View our Sales Policy.
           </Text>
+          {"  |  "}
+          <Text
+            style={{ color: colors.primary, textDecorationLine: "underline" }}
+            onPress={() => router.push("/privacy-policy")}
+          >
+            Privacy Policy.
+          </Text>
         </Text>
       </View>
     </View>

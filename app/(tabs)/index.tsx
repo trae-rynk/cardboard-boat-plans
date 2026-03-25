@@ -206,6 +206,21 @@ export default function HomeScreen() {
 
         {/* Copyright Footer */}
         <View style={styles.copyrightFooter}>
+          <View style={styles.footerLinks}>
+            <Text
+              style={[styles.footerLink, { color: colors.primary }]}
+              onPress={() => router.push('/privacy-policy' as any)}
+            >
+              Privacy Policy
+            </Text>
+            <Text style={styles.copyrightText}> · </Text>
+            <Text
+              style={[styles.footerLink, { color: colors.primary }]}
+              onPress={() => router.push('/no-refunds-policy' as any)}
+            >
+              Sales Policy
+            </Text>
+          </View>
           <Text style={styles.copyrightText}>© 2026 Champion Cardboard Boat Plans. All Rights Reserved.</Text>
         </View>
       </ScrollView>
@@ -417,6 +432,16 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 24,
     alignItems: 'center',
+    gap: 6,
+  },
+  footerLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  footerLink: {
+    fontSize: 12,
+    textDecorationLine: 'underline',
   },
   copyrightText: {
     fontSize: 12,

@@ -201,3 +201,7 @@
 ## No Refunds Policy Page
 - [x] Create app/no-refunds-policy.tsx screen with full digital download sales policy
 - [x] Link "All sales are final" notice in checkout.tsx to the policy screen
+
+## Privacy Policy Page
+- [x] Create app/privacy-policy.tsx screen with full privacy policy
+- [x] Link privacy policy from checkout footer and home screen footer
