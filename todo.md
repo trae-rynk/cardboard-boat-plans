@@ -197,3 +197,7 @@
 - [x] Handle payment_intent.succeeded: fulfill order, create downloads, schedule review email, create chat entitlement (Premium)
 - [x] Handle payment_intent.payment_failed: mark order as failed
 - [x] Prevent duplicate fulfillment (idempotency guard on order status)
+
+## No Refunds Policy Page
+- [x] Create app/no-refunds-policy.tsx screen with full digital download sales policy
+- [x] Link "All sales are final" notice in checkout.tsx to the policy screen

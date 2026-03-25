@@ -265,7 +265,13 @@ export default function CheckoutScreen() {
           )}
         </Pressable>
         <Text style={[styles.refundNote, { color: colors.muted }]}>
-          🔒 All sales are final. Digital downloads are non-refundable.
+          🔒 All sales are final. Digital downloads are non-refundable.{" "}
+          <Text
+            style={{ color: colors.primary, textDecorationLine: "underline" }}
+            onPress={() => router.push("/no-refunds-policy")}
+          >
+            View our Sales Policy.
+          </Text>
         </Text>
       </View>
     </View>
