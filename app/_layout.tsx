@@ -8,7 +8,6 @@ import "react-native-reanimated";
 import { Platform } from "react-native";
 import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider } from "@/lib/theme-provider";
-import { StripeProvider } from "@stripe/stripe-react-native";
 import {
   SafeAreaFrameContext,
   SafeAreaInsetsContext,
@@ -26,6 +25,26 @@ const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
 export const unstable_settings = {
   anchor: "(tabs)",
 };
+
+// StripeProvider wrapper — native only, excluded on web via platform-specific file
+function StripeWrapper({ children }: { children: React.ReactNode }) {
+  if (Platform.OS === "web") {
+    return <>{children}</>;
+  }
+  // Lazy require so Metro doesn't attempt to bundle stripe on web
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { StripeProvider } = require("@stripe/stripe-react-native");
+  const stripePk = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+  return (
+    <StripeProvider
+      publishableKey={stripePk}
+      merchantIdentifier="merchant.com.championcardboardboats"
+      urlScheme="manus"
+    >
+      {children}
+    </StripeProvider>
+  );
+}
 
 export default function RootLayout() {
   const initialInsets = initialWindowMetrics?.insets ?? DEFAULT_WEB_INSETS;
@@ -79,29 +98,23 @@ export default function RootLayout() {
     };
   }, [initialInsets, initialFrame]);
 
-  const stripePk = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
-
   const content = (
-    <StripeProvider
-      publishableKey={stripePk}
-      merchantIdentifier="merchant.com.championcardboardboats"
-      urlScheme={Platform.OS !== "web" ? "manus" : undefined}
-    >
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          {/* Default to hiding native headers so raw route segments don't appear (e.g. "(tabs)", "products/[id]"). */}
-          {/* If a screen needs the native header, explicitly enable it and set a human title via Stack.Screen options. */}
-          {/* in order for ios apps tab switching to work properly, use presentation: "fullScreenModal" for login page, whenever you decide to use presentation: "modal*/}
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="oauth/callback" />
-          </Stack>
-          <StatusBar style="auto" />
-        </QueryClientProvider>
-      </trpc.Provider>
-    </GestureHandlerRootView>
-    </StripeProvider>
+    <StripeWrapper>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <trpc.Provider client={trpcClient} queryClient={queryClient}>
+          <QueryClientProvider client={queryClient}>
+            {/* Default to hiding native headers so raw route segments don't appear (e.g. "(tabs)", "products/[id]"). */}
+            {/* If a screen needs the native header, explicitly enable it and set a human title via Stack.Screen options. */}
+            {/* in order for ios apps tab switching to work properly, use presentation: "fullScreenModal" for login page, whenever you decide to use presentation: "modal*/}
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="oauth/callback" />
+            </Stack>
+            <StatusBar style="auto" />
+          </QueryClientProvider>
+        </trpc.Provider>
+      </GestureHandlerRootView>
+    </StripeWrapper>
   );
 
   const shouldOverrideSafeArea = Platform.OS === "web";
