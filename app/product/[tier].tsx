@@ -80,9 +80,17 @@ export default function ProductDetailScreen() {
               reviewCount={ratingStats.totalReviews}
             />
           )}
-          <Text style={[styles.productDescription, { color: colors.muted }]}>
-            {product.description}
-          </Text>
+          {tier === 'premium' ? (
+            <Text style={[styles.productDescription, { color: colors.muted }]}>
+              {'The complete award-winning system '}
+              <Text style={{ fontWeight: '700', color: colors.foreground }}>plus 30 days of live support.</Text>
+              {' Everything in the Basic package PLUS the confidence of knowing Captain Bob is here to help guide you every step of the way.'}
+            </Text>
+          ) : (
+            <Text style={[styles.productDescription, { color: colors.muted }]}>
+              {product.description}
+            </Text>
+          )}
         </View>
 
         {/* Captain Bob Live Support Callout — Premium only */}

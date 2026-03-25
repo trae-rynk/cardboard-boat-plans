@@ -16,7 +16,8 @@ import * as Haptics from 'expo-haptics';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/hooks/use-colors';
 import { trpc } from '@/lib/trpc';
-import { useChatStore } from '@/lib/chat-store';
+import { useChatStore, saveChatCredentials } from '@/lib/chat-store';
+import { isExpoGo } from '@/lib/is-expo-go';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -333,6 +334,21 @@ export default function CaptainBobScreen() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
+  const devUnlock = trpc.chat.devUnlock.useMutation();
+  const [isDevUnlocking, setIsDevUnlocking] = useState(false);
+
+  const handleDevUnlock = async () => {
+    setIsDevUnlocking(true);
+    try {
+      const result = await devUnlock.mutateAsync();
+      await saveChatCredentials(result.orderId, result.chatToken);
+    } catch (e: any) {
+      Alert.alert('Dev Unlock Failed', e?.message ?? 'Unknown error');
+    } finally {
+      setIsDevUnlocking(false);
+    }
+  };
+
   if (!hasCredentials) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
@@ -342,6 +358,28 @@ export default function CaptainBobScreen() {
           <Text style={[styles.headerSub, { color: colors.muted }]}>Premium Support</Text>
         </View>
         <NoAccessState colors={colors} />
+        {isExpoGo && (
+          <View style={{ paddingHorizontal: 24, paddingBottom: 24 }}>
+            <Pressable
+              onPress={handleDevUnlock}
+              disabled={isDevUnlocking}
+              style={({ pressed }) => ({
+                backgroundColor: '#1B4F8A',
+                borderRadius: 12,
+                paddingVertical: 14,
+                alignItems: 'center',
+                opacity: pressed || isDevUnlocking ? 0.7 : 1,
+              })}
+            >
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>
+                {isDevUnlocking ? 'Unlocking...' : '🔧 Dev: Test Captain Bob'}
+              </Text>
+            </Pressable>
+            <Text style={{ color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 8 }}>
+              Only visible in Expo Go — not shown in production
+            </Text>
+          </View>
+        )}
       </View>
     );
   }

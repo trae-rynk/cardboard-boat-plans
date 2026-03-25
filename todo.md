@@ -232,3 +232,7 @@
 - [x] Fix: replaced direct useStripe import in checkout.tsx with useStripePayment abstraction
 - [x] Fix: added Expo Go notice banner in checkout UI so payment degradation is clear
 - [x] Fix: added Stripe web stub via Metro resolver alias (already done previously)
+
+## Premium Page & Captain Bob Test Mode
+- [x] Bold "plus 30 days of live support" text on premium product page
+- [x] Add dev test mode to unlock Captain Bob without purchase (Expo Go testing)

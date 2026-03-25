@@ -461,6 +461,29 @@ export const appRouter = router({
     /**
      * Confirm an extension purchase and extend the entitlement by 30 days.
      */
+    /**
+     * DEV-ONLY: Create a test order + entitlement so Captain Bob can be tested
+     * in Expo Go without going through the Stripe purchase flow.
+     * Only works when NODE_ENV !== 'production'.
+     */
+    devUnlock: publicProcedure
+      .mutation(async () => {
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error('devUnlock is not available in production.');
+        }
+        // Create a test order marked as paid
+        const orderId = await db.createOrder({
+          email: 'dev-test@example.com',
+          productTier: 'premium',
+          amountCents: 3999,
+          status: 'paid',
+          stripePaymentIntentId: 'dev_test_' + Date.now(),
+        });
+        // Create a 30-day entitlement for the test order
+        const { chatToken } = await db.createChatEntitlement(orderId, 'dev-test@example.com');
+        return { orderId, chatToken };
+      }),
+
     confirmExtension: publicProcedure
       .input(
         z.object({
