@@ -77,6 +77,7 @@ export const appRouter = router({
         return {
           orderId,
           clientSecret,
+          stripePaymentIntentId,
           amountCents,
           stripeConfigured: !!process.env.STRIPE_SECRET_KEY,
         };

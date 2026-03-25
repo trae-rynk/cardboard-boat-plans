@@ -181,3 +181,12 @@
 
 ## Homepage Premium Card Callout
 - [x] Add Captain Bob "Includes 30-day live support" callout to Premium package card on homepage
+
+## Stripe Payment Sheet Integration
+- [x] Install @stripe/stripe-react-native SDK
+- [x] Add STRIPE_SECRET_KEY and EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY as secrets
+- [x] Update server createPaymentIntent route to use real Stripe API (already built, now returns stripePaymentIntentId)
+- [x] Wrap app root with StripeProvider using publishable key
+- [x] Replace simulated checkout form with Stripe Payment Sheet
+- [x] Support Apple Pay / Google Pay via Payment Sheet (enabled automatically)
+- [ ] Test full payment flow with Stripe test cards (use 4242 4242 4242 4242 / any future date / any CVC)

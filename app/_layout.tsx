@@ -8,6 +8,7 @@ import "react-native-reanimated";
 import { Platform } from "react-native";
 import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider } from "@/lib/theme-provider";
+import { StripeProvider } from "@stripe/stripe-react-native";
 import {
   SafeAreaFrameContext,
   SafeAreaInsetsContext,
@@ -78,7 +79,14 @@ export default function RootLayout() {
     };
   }, [initialInsets, initialFrame]);
 
+  const stripePk = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+
   const content = (
+    <StripeProvider
+      publishableKey={stripePk}
+      merchantIdentifier="merchant.com.championcardboardboats"
+      urlScheme={Platform.OS !== "web" ? "manus" : undefined}
+    >
     <GestureHandlerRootView style={{ flex: 1 }}>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
@@ -93,6 +101,7 @@ export default function RootLayout() {
         </QueryClientProvider>
       </trpc.Provider>
     </GestureHandlerRootView>
+    </StripeProvider>
   );
 
   const shouldOverrideSafeArea = Platform.OS === "web";

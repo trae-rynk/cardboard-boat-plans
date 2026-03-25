@@ -14,6 +14,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { useStripe } from '@stripe/stripe-react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/hooks/use-colors';
@@ -25,39 +26,18 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const product = PRODUCTS[(tier as ProductTier) ?? 'basic'];
   const accentColor = tier === 'premium' ? colors.accent : colors.primary;
 
   const [email, setEmail] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiry, setExpiry] = useState('');
-  const [cvc, setCvc] = useState('');
-  const [cardName, setCardName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const createPaymentIntent = trpc.orders.createPaymentIntent.useMutation();
   const confirmPayment = trpc.orders.confirmPayment.useMutation();
 
-  function formatCardNumber(text: string) {
-    const cleaned = text.replace(/\D/g, '').slice(0, 16);
-    return cleaned.replace(/(.{4})/g, '$1 ').trim();
-  }
-
-  function formatExpiry(text: string) {
-    const cleaned = text.replace(/\D/g, '').slice(0, 4);
-    if (cleaned.length >= 3) {
-      return `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
-    }
-    return cleaned;
-  }
-
-  const isFormValid =
-    email.includes('@') &&
-    cardNumber.replace(/\s/g, '').length === 16 &&
-    expiry.length === 5 &&
-    cvc.length >= 3 &&
-    cardName.trim().length > 0;
+  const isFormValid = email.includes('@') && email.includes('.');
 
   async function handlePay() {
     if (!isFormValid) return;
@@ -67,30 +47,83 @@ export default function CheckoutScreen() {
 
     setIsProcessing(true);
     try {
-      // Step 1: Create payment intent on server
+      // Step 1: Create PaymentIntent on server
       const intentResult = await createPaymentIntent.mutateAsync({
         productTier: product.id,
         email: email.trim(),
       });
 
-      // Step 2: In a real app, we'd use Stripe SDK to confirm the payment
-      // For this demo, we simulate a successful payment
-      if (!intentResult.stripeConfigured) {
-        // Demo mode: simulate payment processing
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+      if (!intentResult.clientSecret || !intentResult.stripeConfigured) {
+        // Demo / Stripe not configured — fall through to confirm directly
+        const confirmation = await confirmPayment.mutateAsync({
+          orderId: intentResult.orderId,
+        });
+        if (Platform.OS !== 'web') {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        router.replace({
+          pathname: '/purchase-success',
+          params: {
+            orderId: String(confirmation.orderId),
+            productTier: confirmation.productTier,
+          },
+        });
+        return;
       }
 
-      // Step 3: Confirm payment on server and create download tokens
+      // Step 2: Initialise the Payment Sheet with the client secret
+      const { error: initError } = await initPaymentSheet({
+        merchantDisplayName: 'Champion Cardboard Boats',
+        paymentIntentClientSecret: intentResult.clientSecret,
+        defaultBillingDetails: { email: email.trim() },
+        appearance: {
+          colors: {
+            primary: accentColor,
+            background: colors.background,
+            componentBackground: colors.surface,
+            componentBorder: colors.border,
+            componentDivider: colors.border,
+            primaryText: colors.foreground,
+            secondaryText: colors.muted,
+            componentText: colors.foreground,
+            placeholderText: colors.muted,
+          },
+        },
+        applePay: {
+          merchantCountryCode: 'US',
+        },
+        googlePay: {
+          merchantCountryCode: 'US',
+          testEnv: true,
+        },
+      });
+
+      if (initError) {
+        throw new Error(initError.message);
+      }
+
+      // Step 3: Present the Payment Sheet to the user
+      const { error: presentError } = await presentPaymentSheet();
+
+      if (presentError) {
+        if (presentError.code === 'Canceled') {
+          // User dismissed — not an error, just stop processing
+          setIsProcessing(false);
+          return;
+        }
+        throw new Error(presentError.message);
+      }
+
+      // Step 4: Payment confirmed by Stripe — tell our server
       const confirmation = await confirmPayment.mutateAsync({
         orderId: intentResult.orderId,
-        stripePaymentIntentId: undefined, // Would be from Stripe SDK in production
+        stripePaymentIntentId: intentResult.stripePaymentIntentId ?? undefined,
       });
 
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
-      // Navigate to success screen
       router.replace({
         pathname: '/purchase-success',
         params: {
@@ -151,10 +184,13 @@ export default function CheckoutScreen() {
             </View>
           </View>
 
-          {/* Payment Form */}
+          {/* Email — needed before opening Payment Sheet */}
           <View style={styles.formSection}>
             <Text style={[styles.formSectionTitle, { color: colors.foreground }]}>
               Contact Information
+            </Text>
+            <Text style={[styles.formSectionSubtitle, { color: colors.muted }]}>
+              Your download link will be sent here
             </Text>
             <FormField
               label="Email Address"
@@ -167,57 +203,23 @@ export default function CheckoutScreen() {
             />
           </View>
 
-          <View style={styles.formSection}>
-            <Text style={[styles.formSectionTitle, { color: colors.foreground }]}>
-              Payment Details
+          {/* Payment method info */}
+          <View style={[styles.paymentInfoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.paymentInfoRow}>
+              <IconSymbol name="lock.fill" size={16} color={accentColor} />
+              <Text style={[styles.paymentInfoTitle, { color: colors.foreground }]}>
+                Secure Payment via Stripe
+              </Text>
+            </View>
+            <Text style={[styles.paymentInfoBody, { color: colors.muted }]}>
+              Tap "Pay Now" to open the secure Stripe payment sheet. Accepts all major cards, Apple Pay, and Google Pay.
             </Text>
-            <View style={[styles.cardBrands, { marginBottom: 12 }]}>
-              {['VISA', 'MC', 'AMEX'].map((brand) => (
-                <View key={brand} style={[styles.cardBrandBadge, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+            <View style={styles.cardBrands}>
+              {['VISA', 'MC', 'AMEX', 'Apple Pay', 'G Pay'].map((brand) => (
+                <View key={brand} style={[styles.cardBrandBadge, { borderColor: colors.border, backgroundColor: colors.background }]}>
                   <Text style={[styles.cardBrandText, { color: colors.muted }]}>{brand}</Text>
                 </View>
               ))}
-            </View>
-
-            <FormField
-              label="Name on Card"
-              placeholder="John Smith"
-              value={cardName}
-              onChangeText={setCardName}
-              autoCapitalize="words"
-              colors={colors}
-            />
-            <FormField
-              label="Card Number"
-              placeholder="1234 5678 9012 3456"
-              value={cardNumber}
-              onChangeText={(t) => setCardNumber(formatCardNumber(t))}
-              keyboardType="numeric"
-              colors={colors}
-            />
-            <View style={styles.cardRow}>
-              <View style={{ flex: 1 }}>
-                <FormField
-                  label="Expiry"
-                  placeholder="MM/YY"
-                  value={expiry}
-                  onChangeText={(t) => setExpiry(formatExpiry(t))}
-                  keyboardType="numeric"
-                  colors={colors}
-                />
-              </View>
-              <View style={{ width: 16 }} />
-              <View style={{ flex: 1 }}>
-                <FormField
-                  label="CVC"
-                  placeholder="123"
-                  value={cvc}
-                  onChangeText={(t) => setCvc(t.replace(/\D/g, '').slice(0, 4))}
-                  keyboardType="numeric"
-                  secureTextEntry
-                  colors={colors}
-                />
-              </View>
             </View>
           </View>
 
@@ -293,7 +295,7 @@ function FormField({
 }: FormFieldProps) {
   return (
     <View style={styles.fieldContainer}>
-      <Text style={[styles.fieldLabel, { color: colors.muted }]}>{label}</Text>
+      <Text style={[styles.fieldLabel, { color: colors.foreground }]}>{label}</Text>
       <TextInput
         style={[
           styles.fieldInput,
@@ -304,7 +306,7 @@ function FormField({
           },
         ]}
         placeholder={placeholder}
-        placeholderTextColor={colors.muted + '88'}
+        placeholderTextColor={colors.muted}
         value={value}
         onChangeText={onChangeText}
         keyboardType={keyboardType}
@@ -321,20 +323,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    gap: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 0.5,
+    gap: 8,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 4,
   },
   headerTitle: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   secureTag: {
     flexDirection: 'row',
@@ -346,11 +346,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   orderSummary: {
-    margin: 20,
+    margin: 16,
     borderRadius: 14,
     borderWidth: 1,
     padding: 16,
-    gap: 12,
   },
   orderRow: {
     flexDirection: 'row',
@@ -359,7 +358,6 @@ const styles = StyleSheet.create({
   },
   orderLabel: {
     fontSize: 12,
-    fontWeight: '500',
     marginBottom: 2,
   },
   orderName: {
@@ -371,52 +369,42 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   orderPrice: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
+    marginLeft: 12,
   },
   orderDivider: {
     height: 1,
+    marginVertical: 12,
   },
   orderTotalLabel: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   orderTotalPrice: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
   },
   formSection: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    gap: 4,
+    paddingHorizontal: 16,
+    marginBottom: 8,
   },
   formSectionTitle: {
     fontSize: 16,
     fontWeight: '700',
+    marginBottom: 4,
+  },
+  formSectionSubtitle: {
+    fontSize: 13,
     marginBottom: 12,
-  },
-  cardBrands: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  cardBrandBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  cardBrandText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
   },
   fieldContainer: {
-    marginBottom: 12,
-    gap: 6,
+    marginBottom: 14,
   },
   fieldLabel: {
     fontSize: 13,
     fontWeight: '600',
+    marginBottom: 6,
   },
   fieldInput: {
     borderWidth: 1,
@@ -425,43 +413,71 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
   },
-  cardRow: {
+  paymentInfoCard: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 16,
+    gap: 8,
+  },
+  paymentInfoRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  paymentInfoTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  paymentInfoBody: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  cardBrands: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
+  cardBrandBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  cardBrandText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   securityNote: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    marginHorizontal: 20,
+    marginHorizontal: 16,
+    marginBottom: 16,
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    marginBottom: 20,
   },
   securityNoteText: {
+    flex: 1,
     fontSize: 12,
     lineHeight: 18,
-    flex: 1,
   },
   stickyBottom: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderTopWidth: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 12,
+    borderTopWidth: 0.5,
     gap: 8,
-    alignItems: 'center',
   },
   payButton: {
-    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 16,
     borderRadius: 14,
+    paddingVertical: 16,
   },
   payButtonText: {
     color: '#FFFFFF',
@@ -469,7 +485,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   refundNote: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 11,
+    textAlign: 'center',
+    paddingBottom: 4,
   },
 });
