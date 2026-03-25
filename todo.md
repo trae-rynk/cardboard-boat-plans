@@ -217,3 +217,7 @@
 - [x] Create app/review-redirect.tsx web landing page that tries to open app, falls back to in-browser review form
 - [x] Fix 5-day email scheduling: replace fragile setTimeout with DB-persisted scheduled_at column + polling approach
 - [x] Confirm scheduleReviewEmail fires correctly in production (not just dev)
+
+## Bug: Web Preview Broken (Stripe Native Module)
+- [x] Fix Stripe React Native importing native-only modules on web (NativeCardField, NativeAuBECSDebitForm)
+- [x] Confirm web preview loads correctly after fix
