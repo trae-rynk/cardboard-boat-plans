@@ -221,3 +221,7 @@
 ## Bug: Web Preview Broken (Stripe Native Module)
 - [x] Fix Stripe React Native importing native-only modules on web (NativeCardField, NativeAuBECSDebitForm)
 - [x] Confirm web preview loads correctly after fix
+
+## Captain Bob System Prompt Tuning
+- [x] Rewrite system prompt with owner-provided expert knowledge (waterproofing, skeleton engineering, box sourcing)
+- [x] Embed full plan content: all 6 build steps, complete parts list with dimensions, panel templates, common mistakes
