@@ -171,3 +171,7 @@
 
 ## Video Tutorial Removal
 - [x] Remove Video Tutorial Preview section from Premium product detail screen
+
+## Premium Live Support Highlight
+- [x] Bold and visually distinguish the "30 days of live Captain Bob support" feature in the What's Included list
+- [x] Add a Captain Bob callout section on the Premium detail screen to emphasize live support as the key upgrade reason

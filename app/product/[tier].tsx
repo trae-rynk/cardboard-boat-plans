@@ -85,20 +85,60 @@ export default function ProductDetailScreen() {
           </Text>
         </View>
 
+        {/* Captain Bob Live Support Callout — Premium only */}
+        {tier === 'premium' && (
+          <View style={[styles.captainBobCallout, { backgroundColor: '#1B4F8A', borderColor: '#F4A020' }]}>
+            <Text style={styles.captainBobEmoji}>⚓</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.captainBobHeading}>30 Days of Live Support</Text>
+              <Text style={styles.captainBobBody}>
+                Captain Bob is standing by to answer your questions — from first cut to race day. Ask anything, any time.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* What's Included */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>What's Included</Text>
           <View style={[styles.featureCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             {product.features
               .filter((f) => f.included)
-              .map((feature, index) => (
-                <View key={index} style={styles.featureRow}>
-                  <IconSymbol name="checkmark.circle.fill" size={18} color={colors.success} />
-                  <Text style={[styles.featureText, { color: colors.foreground }]}>
-                    {feature.text}
-                  </Text>
-                </View>
-              ))}
+              .map((feature, index) => {
+                const isLiveSupport = feature.text.toLowerCase().includes('captain bob') || feature.text.toLowerCase().includes('live');
+                return (
+                  <View
+                    key={index}
+                    style={[
+                      styles.featureRow,
+                      isLiveSupport && tier === 'premium' && [
+                        styles.featureRowHighlight,
+                        { backgroundColor: '#FFF7E6', borderColor: '#F4A020' },
+                      ],
+                    ]}
+                  >
+                    <IconSymbol
+                      name="checkmark.circle.fill"
+                      size={isLiveSupport && tier === 'premium' ? 22 : 18}
+                      color={isLiveSupport && tier === 'premium' ? '#F4A020' : colors.success}
+                    />
+                    <Text
+                      style={[
+                        styles.featureText,
+                        { color: colors.foreground },
+                        isLiveSupport && tier === 'premium' && styles.featureTextHighlight,
+                      ]}
+                    >
+                      {feature.text}
+                    </Text>
+                    {isLiveSupport && tier === 'premium' && (
+                      <View style={[styles.newBadge, { backgroundColor: '#F4A020' }]}>
+                        <Text style={styles.newBadgeText}>KEY FEATURE</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
           </View>
         </View>
 
@@ -272,6 +312,53 @@ const styles = StyleSheet.create({
   },
   galleryScroll: {
     marginLeft: -4,
+  },
+  captainBobCallout: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    borderRadius: 14,
+    borderWidth: 2,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  captainBobEmoji: {
+    fontSize: 28,
+    lineHeight: 34,
+  },
+  captainBobHeading: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  captainBobBody: {
+    color: '#D0E8FF',
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  featureRowHighlight: {
+    borderRadius: 10,
+    borderWidth: 1.5,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginHorizontal: -4,
+  },
+  featureTextHighlight: {
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  newBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  newBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   stickyBottom: {
     position: 'absolute',
