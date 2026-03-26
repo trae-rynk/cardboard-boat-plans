@@ -244,3 +244,11 @@
 ## Final Publish-Ready Checkpoint
 - [x] Revert Metro resolver to all-platform Stripe stub (Expo Go stable)
 - [x] Save final publish-ready checkpoint
+
+## Pre-Publish Readiness Check
+- [x] Stripe live keys confirmed (charges enabled, payouts enabled)
+- [x] Stripe webhook secret configured
+- [x] OpenAI API key working (Captain Bob live)
+- [x] Server health confirmed
+- [x] Resend domain verified (championcardboardboats.com) — test email sent successfully
+- [x] All 18 environment variables set
