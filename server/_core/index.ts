@@ -79,9 +79,16 @@ async function startServer() {
   );
 
   // Serve Expo web static build in production
-  // The web-build directory is created by `npx expo export --platform web`
-  const webBuildPath = path.join(process.cwd(), "web-build");
+  // Try multiple candidate paths to handle different Docker working directories
   const { existsSync } = await import("fs");
+  const webBuildCandidates = [
+    path.join(process.cwd(), "web-build"),
+    path.join(process.cwd(), "..", "web-build"),
+    "/usr/src/app/web-build",
+    "/app/web-build",
+  ];
+  const webBuildPath = webBuildCandidates.find(p => existsSync(p)) ?? webBuildCandidates[0];
+  console.log(`[web] cwd=${process.cwd()} | web-build path=${webBuildPath} | exists=${existsSync(webBuildPath)}`);
   if (existsSync(webBuildPath)) {
     app.use(express.static(webBuildPath));
     // SPA fallback — serve index.html for all non-API routes so Expo Router handles navigation
@@ -94,7 +101,15 @@ async function startServer() {
     });
     console.log(`[web] Serving static web build from ${webBuildPath}`);
   } else {
-    console.warn(`[web] No web-build directory found at ${webBuildPath} — web app not served`);
+    console.warn(`[web] No web-build directory found — checked: ${webBuildCandidates.join(", ")}`);
+    // Still add a catch-all so non-API routes don't 404 from Cloudflare
+    app.get("*", (req, res) => {
+      if (!req.path.startsWith("/api") && !req.path.startsWith("/webhook")) {
+        res.status(503).send("<html><body><h2>App loading...</h2><p>The web app is being deployed. Please refresh in a moment.</p></body></html>");
+      } else {
+        res.status(404).json({ error: "Not found" });
+      }
+    });
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
