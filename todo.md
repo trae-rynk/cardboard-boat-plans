@@ -262,3 +262,8 @@
 - [ ] Test full purchase flow on web (Basic + Premium) — requires live Stripe test
 - [ ] Confirm Captain Bob unlocks after web purchase — requires live Stripe test
 - [ ] Confirm download email sends after web purchase — requires live Stripe test
+
+## Desktop Responsive Layout (768px+)
+- [x] Build desktop home screen: two-column hero, side-by-side package cards, testimonials row
+- [x] Add desktop top navigation bar (replaces bottom tab bar on wide screens)
+- [ ] Review with user before expanding to other screens
