@@ -114,6 +114,13 @@ export const appRouter = router({
         // Create download tokens
         const downloads = await db.createDownloadsForOrder(order.id, order.productTier);
 
+        // Send order confirmation email immediately (fire-and-forget)
+        sendOrderConfirmationEmail({
+          orderId: order.id,
+          email: order.email,
+          productTier: order.productTier,
+        }).catch((err) => console.warn("[ConfirmEmail] Failed to send:", err));
+
         // Schedule 5-day review email (fire-and-forget, non-blocking)
         scheduleReviewEmail(order.id, order.email, order.productTier, order.guestReviewToken ?? "").catch(
           (err) => console.warn("[ReviewEmail] Failed to schedule:", err)
@@ -828,6 +835,159 @@ export function startReviewEmailPoller() {
   poll();
   setInterval(poll, POLL_INTERVAL_MS);
   console.log("[ReviewEmail] Poller started (interval: 1 hour).");
+}
+
+/**
+ * Sends the order confirmation email immediately after purchase.
+ * Includes order number, product details, download instructions, recovery info,
+ * and Captain Bob access info for Premium orders.
+ */
+export async function sendOrderConfirmationEmail({
+  orderId,
+  email,
+  productTier,
+}: {
+  orderId: number;
+  email: string;
+  productTier: "basic" | "premium";
+}) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn(`[ConfirmEmail] RESEND_API_KEY not set — skipping confirmation email for order #${orderId}`);
+    return;
+  }
+
+  const { Resend } = await import("resend");
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  const isPremium = productTier === "premium";
+  const productName = isPremium ? "Premium Builder Package" : "Builder Plan Package";
+  const appUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://championcardboardboats.com";
+
+  const bobSection = isPremium ? `
+          <!-- Captain Bob Section -->
+          <tr>
+            <td style="padding:0 40px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f7ff;border-radius:10px;border:1px solid #bfdbfe;padding:20px;">
+                <tr>
+                  <td>
+                    <p style="margin:0 0 8px;color:#1e3a5f;font-size:15px;font-weight:800;">⚓ Captain Bob Chat Access</p>
+                    <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+                      Your Premium package includes 30 days of expert chat support with Captain Bob.
+                      Open the app, go to the <strong>Captain Bob</strong> tab, and start chatting — your access is already unlocked.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>` : '';
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Order Confirmation</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
+          <!-- Header -->
+          <tr>
+            <td style="background:#1e3a5f;padding:32px 40px;text-align:center;">
+              <p style="margin:0;color:#f59e0b;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Champion Cardboard Boats</p>
+              <h1 style="margin:12px 0 0;color:#ffffff;font-size:26px;font-weight:800;line-height:1.3;">You're all set! 🏆</h1>
+            </td>
+          </tr>
+          <!-- Order Confirmed Banner -->
+          <tr>
+            <td style="background:#f59e0b;padding:14px 40px;text-align:center;">
+              <p style="margin:0;color:#1e3a5f;font-size:14px;font-weight:800;letter-spacing:0.5px;">ORDER CONFIRMED — #${orderId}</p>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px 40px 24px;">
+              <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.6;">
+                Thank you for purchasing the <strong>${productName}</strong>. Your plans are ready to download right now.
+              </p>
+              <!-- Order Summary Box -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="color:#6b7280;font-size:13px;padding-bottom:8px;">Product</td>
+                        <td style="color:#111827;font-size:13px;font-weight:700;text-align:right;padding-bottom:8px;">${productName}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#6b7280;font-size:13px;padding-bottom:8px;">Order Number</td>
+                        <td style="color:#111827;font-size:13px;font-weight:700;text-align:right;padding-bottom:8px;">#${orderId}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#6b7280;font-size:13px;">Email</td>
+                        <td style="color:#111827;font-size:13px;font-weight:700;text-align:right;">${email}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <!-- Download CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                <tr>
+                  <td align="center">
+                    <a href="${appUrl}"
+                       style="display:inline-block;background:#f59e0b;color:#1e3a5f;font-size:16px;font-weight:800;padding:16px 40px;border-radius:10px;text-decoration:none;letter-spacing:0.5px;">
+                      📄 Download Your Plans
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          ${bobSection}
+          <!-- Recovery Info -->
+          <tr>
+            <td style="padding:0 40px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border-radius:10px;border:1px solid #fde68a;padding:20px;">
+                <tr>
+                  <td>
+                    <p style="margin:0 0 8px;color:#92400e;font-size:14px;font-weight:800;">💡 Save This Email — Your Access Key</p>
+                    <p style="margin:0;color:#78350f;font-size:13px;line-height:1.6;">
+                      If you switch devices or clear your browser, you can restore access to your plans anytime.
+                      Open the app → <strong>My Downloads</strong> tab → tap <strong>Recover My Purchase</strong> → enter your email and order number <strong>#${orderId}</strong>.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f9fafb;padding:24px 40px;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
+                © 2026 Champion Cardboard Boats. All Rights Reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  await resend.emails.send({
+    from: "Champion Cardboard Boats <noreply@championcardboardboats.com>",
+    to: email,
+    subject: `Your ${productName} is ready to download — Order #${orderId}`,
+    html,
+  });
+
+  console.log(`[ConfirmEmail] Sent order confirmation to ${email} for order #${orderId}`);
 }
 
 /**

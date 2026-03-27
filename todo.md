@@ -306,3 +306,7 @@
 - [x] Add "Recover My Purchase" form to Downloads tab empty state
 - [x] Update Captain Bob gate to use unified recoverPurchase endpoint
 - [x] Single form restores both downloads and Captain Bob in one step
+
+## Bug: Order Confirmation Email Missing
+- [x] Build sendOrderConfirmationEmail with order number, download link, recovery instructions
+- [x] Wire confirmation email into confirmPayment and Stripe webhook handlers

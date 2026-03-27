@@ -16,7 +16,7 @@
 
 import type { Request, Response } from "express";
 import * as db from "./db";
-import { scheduleReviewEmail } from "./routers";
+import { scheduleReviewEmail, sendOrderConfirmationEmail } from "./routers";
 
 async function getStripe() {
   const Stripe = (await import("stripe")).default;
@@ -48,6 +48,13 @@ async function fulfillOrder(orderId: number, stripePaymentIntentId: string): Pro
 
   // Create download tokens
   await db.createDownloadsForOrder(order.id, order.productTier);
+
+  // Send order confirmation email immediately (fire-and-forget)
+  sendOrderConfirmationEmail({
+    orderId: order.id,
+    email: order.email,
+    productTier: order.productTier,
+  }).catch((err) => console.warn("[Webhook] Failed to send confirmation email:", err));
 
   // Schedule 5-day review email (fire-and-forget)
   scheduleReviewEmail(
