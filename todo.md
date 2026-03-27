@@ -292,3 +292,11 @@
 ## Bug: Captain Bob Button Does Nothing
 - [x] Diagnose why Captain Bob button on purchase success screen does nothing
 - [x] Fix Captain Bob chat opening after Premium purchase
+
+## Feature: Cross-Device Captain Bob Access Recovery
+- [x] Add restoreChatAccess server endpoint (verify email + orderId, return chatToken)
+- [x] Add "Restore Access" UI to Captain Bob NoAccessState (email + order number form)
+- [x] Save credentials locally after successful restore so subsequent visits are automatic
+
+## Captain Bob FAQ Additions
+- [x] Add panel templates location FAQ to Captain Bob system prompt

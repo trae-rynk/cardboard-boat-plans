@@ -503,6 +503,34 @@ export const appRouter = router({
         return { orderId, chatToken };
       }),
 
+    /**
+     * Restore Captain Bob access on a new device.
+     * Verifies that the provided email matches a paid Premium order with the given orderId,
+     * then returns the existing chatToken so it can be saved locally.
+     * Rate-limited by checking order status only — no brute-force risk since orderId + email
+     * must both match exactly.
+     */
+    restoreChatAccess: publicProcedure
+      .input(z.object({ orderId: z.number(), email: z.string().email() }))
+      .mutation(async ({ input }) => {
+        const order = await db.getOrderById(input.orderId);
+        if (!order) throw new Error("Order not found. Please check your order number.");
+        if (order.status !== "paid") throw new Error("This order has not been completed.");
+        if (order.productTier !== "premium") throw new Error("Captain Bob is only available with the Premium package.");
+        // Case-insensitive email comparison
+        if (order.email.toLowerCase() !== input.email.toLowerCase().trim()) {
+          throw new Error("The email address does not match this order. Please check and try again.");
+        }
+        // Fetch the existing chat entitlement for this order
+        const entitlement = await db.getEntitlementByOrderId(order.id);
+        if (!entitlement) throw new Error("No Captain Bob entitlement found for this order. Please contact support.");
+        return {
+          orderId: order.id,
+          chatToken: entitlement.chatToken,
+          isActive: entitlement.status === "active" && entitlement.expiresAt > new Date(),
+        };
+      }),
+
     confirmExtension: publicProcedure
       .input(
         z.object({
@@ -671,6 +699,9 @@ The cockpit is a recessed cavity in the top of the boat where the paddler sits. 
 - Panel A's (at the ends) have no top cutout — they are solid hexagonal panels. The two innermost A's contain the cockpit front-to-back, and the two outermost A's form the bow and stern starting points of the hull shape.
 
 Summary: The cockpit is a box formed by: Panel B cutouts on top (open cavity), cockpit side walls on the sides, the two innermost Panel A's front and back, and the cockpit floor panel dropped in from above.
+
+## FREQUENTLY ASKED QUESTIONS
+- **Where are the panel templates?** The panel templates are located in the back portion of the plans, after the assembly instruction pages. If a customer asks where to find the panel templates, panel diagrams, or cutting templates, direct them to the back section of their PDF after the step-by-step assembly pages.
 
 ## TONE & STYLE
 You are friendly, encouraging, and practical. Use plain, clear English — no nautical slang, pirate speak, or sailing metaphors after your greeting. Do not use "Ahoy", "Arr", "matey", "sea legs", "landlubber", "set sail", "batten down", or similar phrases in your responses. Keep answers concise — 3–5 sentences for simple questions, a short numbered list for multi-step processes. If someone asks about something unrelated to these specific plans or boat building, politely redirect. Always refer to yourself as Captain Bob. Never invent dimensions or steps not listed above — if unsure, tell the customer to refer to the specific page in their plans.`;

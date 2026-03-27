@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -167,6 +167,37 @@ function ExpiredState({
 // ─── No Access State ─────────────────────────────────────────────────────────
 
 function NoAccessState({ colors }: { colors: ReturnType<typeof useColors> }) {
+  const [showRestore, setShowRestore] = useState(false);
+  const [email, setEmail] = useState('');
+  const [orderIdText, setOrderIdText] = useState('');
+  const [restoreError, setRestoreError] = useState('');
+  const [restoring, setRestoring] = useState(false);
+
+  const restoreMutation = trpc.chat.restoreChatAccess.useMutation();
+
+  const handleRestore = async () => {
+    setRestoreError('');
+    const orderId = parseInt(orderIdText.trim(), 10);
+    if (!email.trim() || !email.includes('@')) {
+      setRestoreError('Please enter a valid email address.');
+      return;
+    }
+    if (isNaN(orderId) || orderId <= 0) {
+      setRestoreError('Please enter a valid order number.');
+      return;
+    }
+    setRestoring(true);
+    try {
+      const result = await restoreMutation.mutateAsync({ orderId, email: email.trim() });
+      await saveChatCredentials(result.orderId, result.chatToken);
+      // useChatStore listener will re-render the parent and show the chat
+    } catch (err: any) {
+      setRestoreError(err?.message ?? 'Could not restore access. Please check your details and try again.');
+    } finally {
+      setRestoring(false);
+    }
+  };
+
   return (
     <View style={styles.expiredContainer}>
       <Text style={{ fontSize: 56, textAlign: 'center' }}>⚓</Text>
@@ -176,6 +207,79 @@ function NoAccessState({ colors }: { colors: ReturnType<typeof useColors> }) {
       <Text style={[styles.expiredBody, { color: colors.muted }]}>
         Captain Bob live support is included with the Premium Builder Package. Upgrade to get 30 days of expert chat support.
       </Text>
+
+      {!showRestore ? (
+        <Pressable
+          style={({ pressed }) => ({
+            marginTop: 8,
+            paddingVertical: 12,
+            paddingHorizontal: 24,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.surface,
+            opacity: pressed ? 0.7 : 1,
+          })}
+          onPress={() => setShowRestore(true)}
+        >
+          <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 15, textAlign: 'center' }}>
+            Already purchased? Restore access
+          </Text>
+        </Pressable>
+      ) : (
+        <View style={[styles.restoreCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.restoreTitle, { color: colors.foreground }]}>Restore Your Access</Text>
+          <Text style={[styles.restoreSub, { color: colors.muted }]}>
+            Enter the email and order number from your purchase confirmation.
+          </Text>
+
+          <TextInput
+            style={[styles.restoreInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+            placeholder="Email address"
+            placeholderTextColor={colors.muted}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="next"
+          />
+          <TextInput
+            style={[styles.restoreInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+            placeholder="Order number (e.g. 42)"
+            placeholderTextColor={colors.muted}
+            value={orderIdText}
+            onChangeText={setOrderIdText}
+            keyboardType="number-pad"
+            returnKeyType="done"
+            onSubmitEditing={handleRestore}
+          />
+
+          {restoreError ? (
+            <Text style={[styles.restoreError, { color: colors.error }]}>{restoreError}</Text>
+          ) : null}
+
+          <Pressable
+            style={({ pressed }) => ([
+              styles.restoreBtn,
+              { backgroundColor: '#1e3a5f' },
+              (pressed || restoring) && { opacity: 0.75 },
+            ])}
+            onPress={handleRestore}
+            disabled={restoring}
+          >
+            {restoring ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 15 }}>Restore Access</Text>
+            )}
+          </Pressable>
+
+          <Pressable onPress={() => { setShowRestore(false); setRestoreError(''); }} style={{ marginTop: 8 }}>
+            <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center' }}>Cancel</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
@@ -707,5 +811,41 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  restoreCard: {
+    width: '100%',
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 20,
+    gap: 12,
+    marginTop: 8,
+  },
+  restoreTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  restoreSub: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  restoreInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+  },
+  restoreError: {
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  restoreBtn: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
   },
 });
