@@ -310,3 +310,7 @@
 ## Bug: Order Confirmation Email Missing
 - [x] Build sendOrderConfirmationEmail with order number, download link, recovery instructions
 - [x] Wire confirmation email into confirmPayment and Stripe webhook handlers
+
+## Bug: Deployed Site Shows "Not Found"
+- [x] Add Expo web export step to build script (npx expo export --platform web)
+- [x] Add static file serving + SPA fallback to production Express server

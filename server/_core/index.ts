@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
@@ -76,6 +77,25 @@ async function startServer() {
       createContext,
     }),
   );
+
+  // Serve Expo web static build in production
+  // The web-build directory is created by `npx expo export --platform web`
+  const webBuildPath = path.join(process.cwd(), "web-build");
+  const { existsSync } = await import("fs");
+  if (existsSync(webBuildPath)) {
+    app.use(express.static(webBuildPath));
+    // SPA fallback — serve index.html for all non-API routes so Expo Router handles navigation
+    app.get("*", (req, res) => {
+      if (!req.path.startsWith("/api") && !req.path.startsWith("/webhook")) {
+        res.sendFile(path.join(webBuildPath, "index.html"));
+      } else {
+        res.status(404).json({ error: "Not found" });
+      }
+    });
+    console.log(`[web] Serving static web build from ${webBuildPath}`);
+  } else {
+    console.warn(`[web] No web-build directory found at ${webBuildPath} — web app not served`);
+  }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
