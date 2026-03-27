@@ -297,6 +297,35 @@ export const appRouter = router({
       }),
 
     /**
+     * Recover a purchase on a new device.
+     * Verifies email + orderId, returns the order's downloads and chatToken (if Premium).
+     * This is the unified cross-device recovery endpoint used by both the Downloads tab
+     * and the Captain Bob gate screen.
+     */
+    recoverPurchase: publicProcedure
+      .input(z.object({ orderId: z.number(), email: z.string().email() }))
+      .mutation(async ({ input }) => {
+        const order = await db.getOrderById(input.orderId);
+        if (!order) throw new Error("Order not found. Please check your order number.");
+        if (order.status !== "paid") throw new Error("This order has not been completed.");
+        if (order.email.toLowerCase() !== input.email.toLowerCase().trim()) {
+          throw new Error("The email address does not match this order. Please check and try again.");
+        }
+        const downloads = await db.getDownloadsByOrderId(order.id);
+        let chatToken: string | null = null;
+        if (order.productTier === "premium") {
+          const entitlement = await db.getEntitlementByOrderId(order.id);
+          chatToken = entitlement?.chatToken ?? null;
+        }
+        return {
+          orderId: order.id,
+          productTier: order.productTier,
+          downloads,
+          chatToken,
+        };
+      }),
+
+    /**
      * Get all downloads for the logged-in user across all their orders.
      */
     myDownloads: protectedProcedure.query(async ({ ctx }) => {

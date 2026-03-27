@@ -300,3 +300,9 @@
 
 ## Captain Bob FAQ Additions
 - [x] Add panel templates location FAQ to Captain Bob system prompt
+
+## Feature: Unified Cross-Device Purchase Recovery
+- [x] Add recoverPurchase server endpoint (email + orderId → downloads + chatToken)
+- [x] Add "Recover My Purchase" form to Downloads tab empty state
+- [x] Update Captain Bob gate to use unified recoverPurchase endpoint
+- [x] Single form restores both downloads and Captain Bob in one step

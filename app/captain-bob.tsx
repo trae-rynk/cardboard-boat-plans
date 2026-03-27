@@ -17,6 +17,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/hooks/use-colors';
 import { trpc } from '@/lib/trpc';
 import { useChatStore, saveChatCredentials } from '@/lib/chat-store';
+import { saveOrderId } from '@/lib/order-store';
 import { isExpoGo } from '@/lib/is-expo-go';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -173,7 +174,7 @@ function NoAccessState({ colors }: { colors: ReturnType<typeof useColors> }) {
   const [restoreError, setRestoreError] = useState('');
   const [restoring, setRestoring] = useState(false);
 
-  const restoreMutation = trpc.chat.restoreChatAccess.useMutation();
+  const restoreMutation = trpc.downloads.recoverPurchase.useMutation();
 
   const handleRestore = async () => {
     setRestoreError('');
@@ -189,8 +190,14 @@ function NoAccessState({ colors }: { colors: ReturnType<typeof useColors> }) {
     setRestoring(true);
     try {
       const result = await restoreMutation.mutateAsync({ orderId, email: email.trim() });
-      await saveChatCredentials(result.orderId, result.chatToken);
-      // useChatStore listener will re-render the parent and show the chat
+      // Save orderId so Downloads tab also loads automatically on this device
+      await saveOrderId(result.orderId);
+      if (result.chatToken) {
+        await saveChatCredentials(result.orderId, result.chatToken);
+        // useChatStore listener will re-render the parent and show the chat
+      } else {
+        setRestoreError('This order does not include Captain Bob access. Only Premium orders include chat support.');
+      }
     } catch (err: any) {
       setRestoreError(err?.message ?? 'Could not restore access. Please check your details and try again.');
     } finally {

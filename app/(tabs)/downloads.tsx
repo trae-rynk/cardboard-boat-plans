@@ -9,6 +9,8 @@ import {
   Alert,
   Linking,
   Platform,
+  TextInput,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -17,8 +19,8 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/hooks/use-colors';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/hooks/use-auth';
-import { useOrderStore } from '@/lib/order-store';
-import type { ProductTier } from '@/constants/products';
+import { useOrderStore, saveOrderId } from '@/lib/order-store';
+import { saveChatCredentials } from '@/lib/chat-store';
 
 export default function DownloadsScreen() {
   const colors = useColors();
@@ -62,7 +64,7 @@ export default function DownloadsScreen() {
     );
   }
 
-  // No purchases found (guest with no saved orders, or signed-in with no orders)
+  // No purchases found — show empty state with Recover My Purchase form
   if (!downloads || downloads.length === 0) {
     return (
       <ScreenContainer>
@@ -70,26 +72,13 @@ export default function DownloadsScreen() {
           <Text style={styles.headerTitle}>My Downloads</Text>
           <Text style={styles.headerSubtitle}>Your purchased files</Text>
         </View>
-        <View style={styles.emptyContainer}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
-            <IconSymbol name="arrow.down.circle.fill" size={40} color={colors.muted} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Purchases Yet</Text>
-          <Text style={[styles.emptyBody, { color: colors.muted }]}>
-            Your purchased plans will appear here after checkout. Files are saved to this device automatically.
-          </Text>
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryBtn,
-              { backgroundColor: colors.primary },
-              pressed && { opacity: 0.85 },
-            ]}
-            onPress={() => router.push('/(tabs)/packages' as any)}
-          >
-            <IconSymbol name="tag.fill" size={16} color="#FFFFFF" />
-            <Text style={styles.primaryBtnText}>View Packages</Text>
-          </Pressable>
-        </View>
+        <EmptyStateWithRecovery
+          colors={colors}
+          onRecovered={() => {
+            guestRefetch();
+          }}
+          onShop={() => router.push('/(tabs)/packages' as any)}
+        />
       </ScreenContainer>
     );
   }
@@ -131,6 +120,176 @@ export default function DownloadsScreen() {
   );
 }
 
+// ─── Empty State with Recovery Form ─────────────────────────────────────────
+
+function EmptyStateWithRecovery({
+  colors,
+  onRecovered,
+  onShop,
+}: {
+  colors: ReturnType<typeof useColors>;
+  onRecovered: () => void;
+  onShop: () => void;
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const [email, setEmail] = useState('');
+  const [orderIdText, setOrderIdText] = useState('');
+  const [error, setError] = useState('');
+  const [recovering, setRecovering] = useState(false);
+  const [recovered, setRecovered] = useState(false);
+  const [recoveredTier, setRecoveredTier] = useState<string | null>(null);
+
+  const recoverMutation = trpc.downloads.recoverPurchase.useMutation();
+
+  const handleRecover = async () => {
+    setError('');
+    const orderId = parseInt(orderIdText.trim(), 10);
+    if (!email.trim() || !email.includes('@')) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    if (isNaN(orderId) || orderId <= 0) {
+      setError('Please enter a valid order number.');
+      return;
+    }
+    setRecovering(true);
+    try {
+      const result = await recoverMutation.mutateAsync({ orderId, email: email.trim() });
+      // Save orderId locally so downloads tab loads automatically next time
+      await saveOrderId(result.orderId);
+      // If Premium, also restore Captain Bob access
+      if (result.chatToken) {
+        await saveChatCredentials(result.orderId, result.chatToken);
+      }
+      setRecoveredTier(result.productTier);
+      setRecovered(true);
+      onRecovered();
+    } catch (err: any) {
+      setError(err?.message ?? 'Could not find your purchase. Please check your details and try again.');
+    } finally {
+      setRecovering(false);
+    }
+  };
+
+  if (recovered) {
+    return (
+      <ScrollView contentContainerStyle={styles.emptyContainer}>
+        <View style={[styles.emptyIcon, { backgroundColor: colors.success + '18' }]}>
+          <IconSymbol name="checkmark.seal.fill" size={40} color={colors.success} />
+        </View>
+        <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Access Restored!</Text>
+        <Text style={[styles.emptyBody, { color: colors.muted }]}>
+          Your purchase has been recovered.
+          {recoveredTier === 'premium'
+            ? ' Your PDF download and Captain Bob chat access are now available on this device.'
+            : ' Your PDF download is now available on this device.'}
+        </Text>
+        <Text style={[styles.emptyBody, { color: colors.muted, marginTop: -8 }]}>
+          Pull down to refresh if your files don't appear immediately.
+        </Text>
+      </ScrollView>
+    );
+  }
+
+  return (
+    <ScrollView contentContainerStyle={styles.emptyContainer}>
+      <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
+        <IconSymbol name="arrow.down.circle.fill" size={40} color={colors.muted} />
+      </View>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Purchases Found</Text>
+      <Text style={[styles.emptyBody, { color: colors.muted }]}>
+        Purchased on another device? Enter your order details below to restore access to your plans and Captain Bob.
+      </Text>
+
+      {!showForm ? (
+        <>
+          <Pressable
+            style={({ pressed }) => [
+              styles.recoverBtn,
+              { backgroundColor: '#1e3a5f' },
+              pressed && { opacity: 0.85 },
+            ]}
+            onPress={() => setShowForm(true)}
+          >
+            <IconSymbol name="arrow.clockwise" size={16} color="#FFFFFF" />
+            <Text style={styles.recoverBtnText}>Recover My Purchase</Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.secondaryBtn,
+              { borderColor: colors.border },
+              pressed && { opacity: 0.7 },
+            ]}
+            onPress={onShop}
+          >
+            <IconSymbol name="tag.fill" size={16} color={colors.primary} />
+            <Text style={[styles.secondaryBtnText, { color: colors.primary }]}>View Packages</Text>
+          </Pressable>
+        </>
+      ) : (
+        <View style={[styles.formCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.formTitle, { color: colors.foreground }]}>Recover My Purchase</Text>
+          <Text style={[styles.formSub, { color: colors.muted }]}>
+            Enter the email and order number from your purchase confirmation email.
+          </Text>
+
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+            placeholder="Email address"
+            placeholderTextColor={colors.muted}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="next"
+          />
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+            placeholder="Order number (from your confirmation email)"
+            placeholderTextColor={colors.muted}
+            value={orderIdText}
+            onChangeText={setOrderIdText}
+            keyboardType="number-pad"
+            returnKeyType="done"
+            onSubmitEditing={handleRecover}
+          />
+
+          {error ? (
+            <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+          ) : null}
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.recoverBtn,
+              { backgroundColor: '#1e3a5f' },
+              (pressed || recovering) && { opacity: 0.75 },
+            ]}
+            onPress={handleRecover}
+            disabled={recovering}
+          >
+            {recovering ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <>
+                <IconSymbol name="arrow.clockwise" size={16} color="#FFFFFF" />
+                <Text style={styles.recoverBtnText}>Restore Access</Text>
+              </>
+            )}
+          </Pressable>
+
+          <Pressable onPress={() => { setShowForm(false); setError(''); }} style={{ marginTop: 4 }}>
+            <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center' }}>Cancel</Text>
+          </Pressable>
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+// ─── Download Card ────────────────────────────────────────────────────────────
+
 interface DownloadCardProps {
   download: {
     id: number;
@@ -153,7 +312,7 @@ interface DownloadCardProps {
 function DownloadCard({ download, colors }: DownloadCardProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const isPremium = download.order.productTier === 'premium';
-  const accentColor = isPremium ? colors.accent : colors.primary;
+  const accentColor = isPremium ? colors.primary : colors.primary;
 
   const resolveToken = trpc.downloads.resolveToken.useQuery(
     { token: download.token },
@@ -290,10 +449,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyContainer: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 28,
+    paddingVertical: 32,
     gap: 16,
   },
   emptyIcon: {
@@ -313,19 +473,64 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     textAlign: 'center',
   },
-  primaryBtn: {
+  recoverBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 14,
-    marginTop: 4,
+    width: '100%',
+    minHeight: 50,
   },
-  primaryBtnText: {
+  recoverBtnText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
+  },
+  secondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 28,
+    paddingVertical: 13,
+    borderRadius: 14,
+    borderWidth: 1,
+    width: '100%',
+  },
+  secondaryBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  formCard: {
+    width: '100%',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+    gap: 12,
+  },
+  formTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  formSub: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+  },
+  errorText: {
+    fontSize: 13,
+    textAlign: 'center',
   },
   welcomeCard: {
     flexDirection: 'row',
