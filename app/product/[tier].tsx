@@ -1,9 +1,8 @@
-import { ScrollView, Text, View, Pressable, StyleSheet } from 'react-native';
+import { ScrollView, Text, View, Pressable, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/screen-container';
-import { ImagePlaceholder } from '@/components/image-placeholder';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/hooks/use-colors';
@@ -24,6 +23,8 @@ export default function ProductDetailScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
 
   const product = PRODUCTS[(tier as ProductTier) ?? 'basic'];
   const accentColor = tier === 'premium' ? colors.accent : colors.primary;
@@ -40,6 +41,228 @@ export default function ProductDetailScreen() {
     );
   }
 
+  const productInfoPanel = (
+    <>
+      {/* Product Header */}
+      <View style={[styles.productHeader, { backgroundColor: colors.surface }]}>
+        {product.badge && (
+          <View style={[styles.badge, { backgroundColor: accentColor }]}>
+            <Text style={styles.badgeText}>⭐ {product.badge}</Text>
+          </View>
+        )}
+        <Text style={[styles.productName, { color: colors.foreground }, isDesktop && styles.productNameDesktop]}>
+          {product.name}
+        </Text>
+        <Text style={[styles.productPrice, { color: accentColor }, isDesktop && styles.productPriceDesktop]}>
+          {product.priceDisplay}
+        </Text>
+        {ratingStats && ratingStats.totalReviews > 0 && (
+          <StarRatingDisplay
+            rating={ratingStats.averageRating}
+            size={15}
+            showNumber
+            reviewCount={ratingStats.totalReviews}
+          />
+        )}
+        {tier === 'premium' ? (
+          <Text style={[styles.productDescription, { color: colors.muted }]}>
+            {'The complete award-winning system '}
+            <Text style={{ fontWeight: '700', color: colors.foreground }}>plus 30 days of live support.</Text>
+            {' Everything in the Basic package PLUS the confidence of knowing Captain Bob is here to help guide you every step of the way.'}
+          </Text>
+        ) : (
+          <Text style={[styles.productDescription, { color: colors.muted }]}>
+            {product.description}
+          </Text>
+        )}
+      </View>
+
+      {/* Captain Bob Live Support Callout — Premium only */}
+      {tier === 'premium' && (
+        <View style={[styles.captainBobCallout, { backgroundColor: '#1B4F8A', borderColor: '#F4A020' }, isDesktop && styles.captainBobCalloutDesktop]}>
+          <Text style={styles.captainBobEmoji}>⚓</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.captainBobHeading}>30 Days of Live Support</Text>
+            <Text style={styles.captainBobBody}>
+              Captain Bob is standing by to answer your questions — from first cut to race day. Ask anything, any time.
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* What's Included */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>What's Included</Text>
+        <View style={[styles.featureCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {product.features
+            .filter((f) => f.included)
+            .map((feature, index) => {
+              const isLiveSupport = feature.text.toLowerCase().includes('captain bob') || feature.text.toLowerCase().includes('live');
+              return (
+                <View
+                  key={index}
+                  style={[
+                    styles.featureRow,
+                    isLiveSupport && tier === 'premium' && [
+                      styles.featureRowHighlight,
+                      { backgroundColor: '#FFF7E6', borderColor: '#F4A020' },
+                    ],
+                  ]}
+                >
+                  <IconSymbol
+                    name="checkmark.circle.fill"
+                    size={isLiveSupport && tier === 'premium' ? 22 : 18}
+                    color={isLiveSupport && tier === 'premium' ? '#F4A020' : colors.success}
+                  />
+                  <Text
+                    style={[
+                      styles.featureText,
+                      { color: colors.foreground },
+                      isLiveSupport && tier === 'premium' && styles.featureTextHighlight,
+                    ]}
+                  >
+                    {feature.text}
+                  </Text>
+                  {isLiveSupport && tier === 'premium' && (
+                    <View style={[styles.newBadge, { backgroundColor: '#F4A020' }]}>
+                      <Text style={styles.newBadgeText}>KEY FEATURE</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+        </View>
+      </View>
+
+      {/* Desktop CTA inside info panel */}
+      {isDesktop && (
+        <View style={[styles.desktopCta, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.desktopCtaPrice}>
+            <Text style={[styles.stickyLabel, { color: colors.muted }]}>One-time purchase</Text>
+            <Text style={[styles.stickyPrice, { color: accentColor }]}>{product.priceDisplay}</Text>
+          </View>
+          <Pressable
+            style={({ pressed }) => [
+              styles.buyButtonDesktop,
+              { backgroundColor: accentColor },
+              pressed && { opacity: 0.85 },
+            ]}
+            onPress={() =>
+              router.push({ pathname: '/checkout', params: { tier: product.id } } as any)
+            }
+          >
+            <IconSymbol name="lock.fill" size={18} color="#FFFFFF" />
+            <Text style={styles.buyButtonText}>Buy Now — {product.priceDisplay}</Text>
+          </Pressable>
+          <Text style={[styles.desktopCtaNote, { color: colors.muted }]}>
+            Instant download delivered to your email
+          </Text>
+        </View>
+      )}
+    </>
+  );
+
+  const galleryPanel = (
+    <>
+      {/* Photo Gallery */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>Gallery</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
+          <Image
+            source={product.heroImage ?? BOAT1_IMAGE}
+            style={{ width: 160, height: 120, borderRadius: 10, marginRight: 12 }}
+            contentFit="cover"
+            transition={200}
+            accessibilityLabel={product.heroImage ? 'Captain Bob Premium Package' : 'Cardboard boat construction'}
+          />
+          <Image
+            source={WIP_IMAGE}
+            style={{ width: 160, height: 120, borderRadius: 10, marginRight: 12 }}
+            contentFit="cover"
+            transition={200}
+            accessibilityLabel="Building the boat in progress"
+          />
+          <Image
+            source={MANUS1_IMAGE}
+            style={{ width: 160, height: 120, borderRadius: 10, marginRight: 12 }}
+            contentFit="cover"
+            transition={200}
+            accessibilityLabel="Finished red cardboard boat with paddle"
+          />
+          <Image
+            source={RACE2_IMAGE}
+            style={{ width: 160, height: 120, borderRadius: 10, marginRight: 12 }}
+            contentFit="cover"
+            transition={200}
+            accessibilityLabel="Kids racing cardboard boats on the water"
+          />
+        </ScrollView>
+      </View>
+
+      {/* Build Examples */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>Build Examples</Text>
+        <Image
+          source={WINNER1_IMAGE}
+          style={{ width: '100%', height: 180, borderRadius: 12 }}
+          contentFit="cover"
+          transition={200}
+          accessibilityLabel="Winner boat racing on the water"
+        />
+      </View>
+
+      {/* Reviews Section */}
+      <View style={[styles.section, { paddingBottom: 8 }]}>
+        <ReviewsSection
+          productTier={(tier as ProductTier) ?? 'basic'}
+          accentColor={accentColor}
+        />
+      </View>
+    </>
+  );
+
+  if (isDesktop) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 60 }}
+        >
+          {/* Desktop hero — full width banner */}
+          <View style={styles.desktopHeroWrapper}>
+            <Image
+              source={product.heroImage ?? HERO_IMAGE}
+              style={styles.desktopHeroImage}
+              contentFit="cover"
+              transition={300}
+              accessibilityLabel={product.name}
+            />
+            {/* Back button inside hero */}
+            <Pressable
+              style={[styles.backButton, { top: 16, backgroundColor: 'rgba(255,255,255,0.9)' }]}
+              onPress={() => router.back()}
+            >
+              <IconSymbol name="chevron.left" size={20} color={colors.foreground} />
+            </Pressable>
+          </View>
+
+          {/* Desktop two-column layout */}
+          <View style={styles.desktopLayout}>
+            {/* Left: info + CTA */}
+            <View style={styles.desktopLeft}>
+              {productInfoPanel}
+            </View>
+            {/* Right: gallery + reviews */}
+            <View style={styles.desktopRight}>
+              {galleryPanel}
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // Mobile layout (unchanged)
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Back button overlay */}
@@ -54,7 +277,7 @@ export default function ProductDetailScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {/* Hero Image — use product-specific image if available, else default */}
+        {/* Hero Image */}
         <Image
           source={product.heroImage ?? HERO_IMAGE}
           style={{ width: '100%', height: 260 }}
@@ -63,155 +286,11 @@ export default function ProductDetailScreen() {
           accessibilityLabel={product.name}
         />
 
-        {/* Product Header */}
-        <View style={[styles.productHeader, { backgroundColor: colors.surface }]}>
-          {product.badge && (
-            <View style={[styles.badge, { backgroundColor: accentColor }]}>
-              <Text style={styles.badgeText}>⭐ {product.badge}</Text>
-            </View>
-          )}
-          <Text style={[styles.productName, { color: colors.foreground }]}>{product.name}</Text>
-          <Text style={[styles.productPrice, { color: accentColor }]}>{product.priceDisplay}</Text>
-          {ratingStats && ratingStats.totalReviews > 0 && (
-            <StarRatingDisplay
-              rating={ratingStats.averageRating}
-              size={15}
-              showNumber
-              reviewCount={ratingStats.totalReviews}
-            />
-          )}
-          {tier === 'premium' ? (
-            <Text style={[styles.productDescription, { color: colors.muted }]}>
-              {'The complete award-winning system '}
-              <Text style={{ fontWeight: '700', color: colors.foreground }}>plus 30 days of live support.</Text>
-              {' Everything in the Basic package PLUS the confidence of knowing Captain Bob is here to help guide you every step of the way.'}
-            </Text>
-          ) : (
-            <Text style={[styles.productDescription, { color: colors.muted }]}>
-              {product.description}
-            </Text>
-          )}
-        </View>
-
-        {/* Captain Bob Live Support Callout — Premium only */}
-        {tier === 'premium' && (
-          <View style={[styles.captainBobCallout, { backgroundColor: '#1B4F8A', borderColor: '#F4A020' }]}>
-            <Text style={styles.captainBobEmoji}>⚓</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.captainBobHeading}>30 Days of Live Support</Text>
-              <Text style={styles.captainBobBody}>
-                Captain Bob is standing by to answer your questions — from first cut to race day. Ask anything, any time.
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* What's Included */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>What's Included</Text>
-          <View style={[styles.featureCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            {product.features
-              .filter((f) => f.included)
-              .map((feature, index) => {
-                const isLiveSupport = feature.text.toLowerCase().includes('captain bob') || feature.text.toLowerCase().includes('live');
-                return (
-                  <View
-                    key={index}
-                    style={[
-                      styles.featureRow,
-                      isLiveSupport && tier === 'premium' && [
-                        styles.featureRowHighlight,
-                        { backgroundColor: '#FFF7E6', borderColor: '#F4A020' },
-                      ],
-                    ]}
-                  >
-                    <IconSymbol
-                      name="checkmark.circle.fill"
-                      size={isLiveSupport && tier === 'premium' ? 22 : 18}
-                      color={isLiveSupport && tier === 'premium' ? '#F4A020' : colors.success}
-                    />
-                    <Text
-                      style={[
-                        styles.featureText,
-                        { color: colors.foreground },
-                        isLiveSupport && tier === 'premium' && styles.featureTextHighlight,
-                      ]}
-                    >
-                      {feature.text}
-                    </Text>
-                    {isLiveSupport && tier === 'premium' && (
-                      <View style={[styles.newBadge, { backgroundColor: '#F4A020' }]}>
-                        <Text style={styles.newBadgeText}>KEY FEATURE</Text>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-          </View>
-        </View>
-
-        {/* Photo Gallery */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>Gallery</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
-            {/* First gallery slot — product hero image (or default boat plans photo) */}
-            <Image
-              source={product.heroImage ?? BOAT1_IMAGE}
-              style={{ width: 160, height: 120, borderRadius: 10, marginRight: 12 }}
-              contentFit="cover"
-              transition={200}
-              accessibilityLabel={product.heroImage ? 'Captain Bob Premium Package' : 'Cardboard boat construction'}
-            />
-            {/* Gallery slot 2 — build in progress */}
-            <Image
-              source={WIP_IMAGE}
-              style={{ width: 160, height: 120, borderRadius: 10, marginRight: 12 }}
-              contentFit="cover"
-              transition={200}
-              accessibilityLabel="Building the boat in progress"
-            />
-            {/* Gallery slot 3 — finished red boat */}
-            <Image
-              source={MANUS1_IMAGE}
-              style={{ width: 160, height: 120, borderRadius: 10, marginRight: 12 }}
-              contentFit="cover"
-              transition={200}
-              accessibilityLabel="Finished red cardboard boat with paddle"
-            />
-            {/* Gallery slot 4 — race day crowd shot */}
-            <Image
-              source={RACE2_IMAGE}
-              style={{ width: 160, height: 120, borderRadius: 10, marginRight: 12 }}
-              contentFit="cover"
-              transition={200}
-              accessibilityLabel="Kids racing cardboard boats on the water"
-            />
-          </ScrollView>
-        </View>
-
-        {/* Additional Images */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: '#1a3a5c' }]}>Build Examples</Text>
-          <Image
-            source={WINNER1_IMAGE}
-            style={{ width: '100%', height: 180, borderRadius: 12 }}
-            contentFit="cover"
-            transition={200}
-            accessibilityLabel="Winner boat racing on the water"
-          />
-        </View>
-
-        {/* Reviews Section */}
-        <View style={[styles.section, { paddingBottom: 8 }]}>
-          <ReviewsSection
-            productTier={(tier as ProductTier) ?? 'basic'}
-            accentColor={accentColor}
-          />
-        </View>
-
+        {productInfoPanel}
+        {galleryPanel}
       </ScrollView>
 
-      {/* Sticky Bottom CTA */}
+      {/* Sticky Bottom CTA — mobile only */}
       <View
         style={[
           styles.stickyBottom,
@@ -283,9 +362,16 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 30,
   },
+  productNameDesktop: {
+    fontSize: 30,
+    lineHeight: 38,
+  },
   productPrice: {
     fontSize: 28,
     fontWeight: '800',
+  },
+  productPriceDesktop: {
+    fontSize: 36,
   },
   productDescription: {
     fontSize: 15,
@@ -330,6 +416,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
+  },
+  captainBobCalloutDesktop: {
+    marginHorizontal: 0,
   },
   captainBobEmoji: {
     fontSize: 28,
@@ -398,9 +487,60 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
   },
+  buyButtonDesktop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 18,
+    borderRadius: 14,
+    width: '100%',
+  },
   buyButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  // Desktop-specific styles
+  desktopHeroWrapper: {
+    position: 'relative',
+    width: '100%',
+  },
+  desktopHeroImage: {
+    width: '100%',
+    height: 380,
+  },
+  desktopLayout: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    maxWidth: 1100,
+    alignSelf: 'center',
+    width: '100%',
+    paddingHorizontal: 40,
+    paddingTop: 32,
+    gap: 40,
+  },
+  desktopLeft: {
+    flex: 5,
+    gap: 0,
+  },
+  desktopRight: {
+    flex: 4,
+    gap: 0,
+  },
+  desktopCta: {
+    marginTop: 24,
+    marginHorizontal: 0,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+    gap: 12,
+  },
+  desktopCtaPrice: {
+    gap: 2,
+  },
+  desktopCtaNote: {
+    fontSize: 12,
+    textAlign: 'center',
   },
 });

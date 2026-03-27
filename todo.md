@@ -267,3 +267,9 @@
 - [x] Build desktop home screen: two-column hero, side-by-side package cards, testimonials row
 - [x] Add desktop top navigation bar (replaces bottom tab bar on wide screens)
 - [ ] Review with user before expanding to other screens
+
+## Desktop Full-App Polish
+- [x] Hide bottom tab bar on desktop (768px+), top nav handles navigation
+- [x] Responsive desktop layout for Packages screen
+- [x] Responsive desktop layout for Product Detail screen
+- [x] Add max-width centered layout to Checkout screen on desktop

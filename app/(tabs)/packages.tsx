@@ -1,4 +1,4 @@
-import { ScrollView, Text, View, Pressable, StyleSheet, Image } from 'react-native';
+import { ScrollView, Text, View, Pressable, StyleSheet, Image, useWindowDimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -8,47 +8,96 @@ import { PRODUCTS, type Product } from '@/constants/products';
 export default function PackagesScreen() {
   const colors = useColors();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 60 }}
       >
+        {/* Desktop top nav spacer */}
+        {isDesktop && <View style={{ height: 16 }} />}
+
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.background }]}>
-          <Text style={[styles.headerTitle, { color: '#1a3a5c' }]}>Choose Your Package</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.muted }]}>
-            Instant digital download after purchase
+        <View style={[styles.header, isDesktop && styles.headerDesktop]}>
+          <Text style={[styles.headerTitle, { color: '#1a3a5c' }, isDesktop && styles.headerTitleDesktop]}>
+            Choose Your Package
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: colors.muted }, isDesktop && styles.headerSubtitleDesktop]}>
+            Instant digital download after purchase — no shipping, no waiting.
           </Text>
         </View>
 
-        <View style={styles.content}>
-          {/* Basic Package */}
-          <PackageCard
-            product={PRODUCTS.basic}
-            accentColor={colors.primary}
-            colors={colors}
-            onPress={() => router.push({ pathname: '/product/[tier]', params: { tier: 'basic' } })}
-          />
-
-          {/* Premium Package */}
-          <PackageCard
-            product={PRODUCTS.premium}
-            accentColor={colors.accent}
-            colors={colors}
-            isFeatured
-            onPress={() => router.push({ pathname: '/product/[tier]', params: { tier: 'premium' } })}
-          />
+        {/* Cards */}
+        <View style={[styles.content, isDesktop && styles.contentDesktop]}>
+          {isDesktop ? (
+            /* Desktop: side-by-side cards */
+            <View style={styles.desktopRow}>
+              <View style={styles.desktopCardWrapper}>
+                <PackageCard
+                  product={PRODUCTS.basic}
+                  accentColor={colors.primary}
+                  colors={colors}
+                  onPress={() => router.push({ pathname: '/product/[tier]', params: { tier: 'basic' } })}
+                />
+              </View>
+              <View style={styles.desktopCardWrapper}>
+                <PackageCard
+                  product={PRODUCTS.premium}
+                  accentColor={colors.accent}
+                  colors={colors}
+                  isFeatured
+                  onPress={() => router.push({ pathname: '/product/[tier]', params: { tier: 'premium' } })}
+                />
+              </View>
+            </View>
+          ) : (
+            /* Mobile: stacked cards */
+            <>
+              <PackageCard
+                product={PRODUCTS.basic}
+                accentColor={colors.primary}
+                colors={colors}
+                onPress={() => router.push({ pathname: '/product/[tier]', params: { tier: 'basic' } })}
+              />
+              <PackageCard
+                product={PRODUCTS.premium}
+                accentColor={colors.accent}
+                colors={colors}
+                isFeatured
+                onPress={() => router.push({ pathname: '/product/[tier]', params: { tier: 'premium' } })}
+              />
+            </>
+          )}
 
           {/* Comparison note */}
-          <View style={[styles.comparisonNote, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.comparisonNote, { backgroundColor: colors.surface, borderColor: colors.border }, isDesktop && styles.comparisonNoteDesktop]}>
             <IconSymbol name="info.circle.fill" size={16} color={colors.muted} />
             <Text style={[styles.comparisonNoteText, { color: colors.muted }]}>
               All packages include lifetime access and free future updates to the plans.
             </Text>
           </View>
         </View>
+
+        {/* Desktop trust strip */}
+        {isDesktop && (
+          <View style={[styles.trustStrip, { borderTopColor: colors.border }]}>
+            {[
+              { icon: '🔒', label: 'Secure Checkout', sub: 'Powered by Stripe' },
+              { icon: '⚡', label: 'Instant Download', sub: 'Delivered by email' },
+              { icon: '♾️', label: 'Lifetime Access', sub: 'Free future updates' },
+              { icon: '🏆', label: 'Proven Plans', sub: 'Win-tested designs' },
+            ].map((item) => (
+              <View key={item.label} style={styles.trustItem}>
+                <Text style={styles.trustIcon}>{item.icon}</Text>
+                <Text style={[styles.trustLabel, { color: '#1a3a5c' }]}>{item.label}</Text>
+                <Text style={[styles.trustSub, { color: colors.muted }]}>{item.sub}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </ScreenContainer>
   );
@@ -144,17 +193,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  headerDesktop: {
+    paddingTop: 40,
+    paddingBottom: 32,
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: '800',
+    textAlign: 'center',
+  },
+  headerTitleDesktop: {
+    fontSize: 36,
   },
   headerSubtitle: {
     fontSize: 14,
     fontWeight: '500',
+    textAlign: 'center',
+  },
+  headerSubtitleDesktop: {
+    fontSize: 16,
   },
   content: {
     padding: 20,
     gap: 20,
+  },
+  contentDesktop: {
+    paddingHorizontal: 40,
+    maxWidth: 1100,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  desktopRow: {
+    flexDirection: 'row',
+    gap: 24,
+    alignItems: 'flex-start',
+  },
+  desktopCardWrapper: {
+    flex: 1,
   },
   packageCard: {
     borderRadius: 16,
@@ -233,6 +308,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
+  comparisonNoteDesktop: {
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
+  },
   comparisonNoteText: {
     fontSize: 13,
     lineHeight: 19,
@@ -241,5 +321,31 @@ const styles = StyleSheet.create({
   heroImage: {
     width: '100%',
     height: 180,
+  },
+  trustStrip: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 0,
+    paddingVertical: 32,
+    paddingHorizontal: 40,
+    borderTopWidth: 1,
+    marginTop: 16,
+  },
+  trustItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    maxWidth: 200,
+  },
+  trustIcon: {
+    fontSize: 28,
+  },
+  trustLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  trustSub: {
+    fontSize: 12,
+    textAlign: 'center',
   },
 });

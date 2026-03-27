@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,6 +47,8 @@ export default function CheckoutScreen() {
 
   const product = PRODUCTS[(tier as ProductTier) ?? 'basic'];
   const accentColor = tier === 'premium' ? colors.accent : colors.primary;
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
 
   const [email, setEmail] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -212,6 +215,8 @@ export default function CheckoutScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 120 }}
         >
+          {/* Desktop: center content with max-width */}
+          <View style={isDesktop ? styles.desktopContentWrapper : undefined}>
           {/* Order Summary — always visible */}
           <View style={[styles.orderSummary, { backgroundColor: accentColor + '12', borderColor: accentColor + '44' }]}>
             <View style={styles.orderRow}>
@@ -313,6 +318,7 @@ export default function CheckoutScreen() {
               </View>
             </>
           )}
+          </View>{/* end desktopContentWrapper */}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -613,5 +619,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     fontWeight: '500',
+  },
+  desktopContentWrapper: {
+    maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
+    paddingTop: 16,
   },
 });
