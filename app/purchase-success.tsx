@@ -11,9 +11,10 @@ import { RateProductModal } from '@/components/rate-product-modal';
 import { saveChatCredentials } from '@/lib/chat-store';
 
 export default function PurchaseSuccessScreen() {
-  const { orderId, productTier } = useLocalSearchParams<{
+  const { orderId, productTier, chatToken: chatTokenParam } = useLocalSearchParams<{
     orderId: string;
     productTier: string;
+    chatToken?: string;
   }>();
   const router = useRouter();
   const colors = useColors();
@@ -63,12 +64,14 @@ export default function PurchaseSuccessScreen() {
 
   const guestReviewToken = orderData?.guestReviewToken ?? '';
 
-  // Save Captain Bob chat credentials for Premium orders
+  // Save Captain Bob chat credentials for Premium orders.
+  // chatTokenParam comes directly from the confirmPayment response via route params.
+  // This is the most reliable source — orderData.chatToken is not stored in the orders table.
   useEffect(() => {
-    if (orderData && productTier === 'premium' && (orderData as any).chatToken) {
-      saveChatCredentials(Number(orderId), (orderData as any).chatToken).catch(console.warn);
+    if (productTier === 'premium' && chatTokenParam) {
+      saveChatCredentials(Number(orderId), chatTokenParam).catch(console.warn);
     }
-  }, [orderData, productTier, orderId]);
+  }, [chatTokenParam, productTier, orderId]);
 
   return (
     <View
@@ -167,7 +170,7 @@ export default function PurchaseSuccessScreen() {
                 { backgroundColor: '#1e3a5f' },
                 pressed && { opacity: 0.85 },
               ]}
-              onPress={() => router.replace('/(tabs)/chat' as any)}
+              onPress={() => router.push('/(tabs)/chat' as any)}
             >
               <Text style={{ fontSize: 18 }}>⚓</Text>
               <Text style={styles.chatBtnText}>Chat with Captain Bob</Text>

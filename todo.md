@@ -273,3 +273,13 @@
 - [x] Responsive desktop layout for Packages screen
 - [x] Responsive desktop layout for Product Detail screen
 - [x] Add max-width centered layout to Checkout screen on desktop
+
+## Bug: Stripe Elements Card Fields Fail to Load on Web
+- [ ] Diagnose why Stripe Elements card input does not render after clicking Pay Now
+- [ ] Fix the StripeWebCheckout component or payment intent creation flow
+- [ ] Verify full checkout flow works end-to-end with test card 4242 4242 4242 4242
+
+## Bug: Post-Purchase Issues (found during test purchase)
+- [x] Fix download files: remove video/unknown file entries, only show correct PDF files
+- [x] Fix Captain Bob unlock: chatToken now passed via route params and saved to chat-store immediately
+- [x] Fix back navigation: changed router.replace to router.push for Captain Bob button

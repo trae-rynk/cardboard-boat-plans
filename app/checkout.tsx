@@ -78,6 +78,7 @@ export default function CheckoutScreen() {
         params: {
           orderId: String(confirmation.orderId),
           productTier: confirmation.productTier,
+          chatToken: confirmation.chatToken ?? '',
         },
       });
     } catch (error: any) {
@@ -114,6 +115,7 @@ export default function CheckoutScreen() {
           params: {
             orderId: String(confirmation.orderId),
             productTier: confirmation.productTier,
+            chatToken: confirmation.chatToken ?? '',
           },
         });
         return;
@@ -159,6 +161,7 @@ export default function CheckoutScreen() {
         params: {
           orderId: String(confirmation.orderId),
           productTier: confirmation.productTier,
+          chatToken: confirmation.chatToken ?? '',
         },
       });
     } catch (error: any) {

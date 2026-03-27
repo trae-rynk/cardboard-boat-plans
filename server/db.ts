@@ -194,34 +194,19 @@ export async function createDownloadsForOrder(orderId: number, productTier: "bas
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  // Both Basic and Premium get the same PDF plans download.
+  // Premium's extra value is the Captain Bob live chat (handled separately via chatEntitlements).
   const assets: InsertDownload[] = [
     {
       orderId,
       token: crypto.randomBytes(32).toString("hex"),
       assetType: "pdf_plans",
-      displayName: "Complete Cardboard Boat Plans (PDF)",
+      displayName: productTier === "premium"
+        ? "Premium Builder Plan Package (PDF)"
+        : "Builder Plan Package (PDF)",
       fileSizeBytes: 4200000,
     },
   ];
-
-  if (productTier === "premium") {
-    assets.push(
-      {
-        orderId,
-        token: crypto.randomBytes(32).toString("hex"),
-        assetType: "video_series",
-        displayName: "Video Tutorial Series (6 Videos)",
-        fileSizeBytes: 850000000,
-      },
-      {
-        orderId,
-        token: crypto.randomBytes(32).toString("hex"),
-        assetType: "design_hacks",
-        displayName: "Advanced Design Hacks Guide (PDF)",
-        fileSizeBytes: 2100000,
-      }
-    );
-  }
 
   await db.insert(downloads).values(assets);
   return assets;
