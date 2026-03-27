@@ -16,6 +16,8 @@ interface ChatCredentials {
 }
 
 let _cached: ChatCredentials | null = null;
+// Track whether we've completed the initial AsyncStorage load
+let _loaded = false;
 const _listeners: Array<() => void> = [];
 
 function notify() {
@@ -25,46 +27,56 @@ function notify() {
 /** Save credentials after a Premium purchase */
 export async function saveChatCredentials(orderId: number, chatToken: string) {
   _cached = { orderId, chatToken };
+  _loaded = true;
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(_cached));
   notify();
 }
 
 /** Load credentials from storage (called on app start) */
 export async function loadChatCredentials(): Promise<ChatCredentials | null> {
-  if (_cached) return _cached;
+  if (_loaded) return _cached;
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (raw) {
       _cached = JSON.parse(raw) as ChatCredentials;
-      return _cached;
     }
   } catch {
     // ignore
   }
-  return null;
+  _loaded = true;
+  return _cached;
 }
 
 /** Clear credentials (e.g. for testing) */
 export async function clearChatCredentials() {
   _cached = null;
+  _loaded = true;
   await AsyncStorage.removeItem(STORAGE_KEY);
   notify();
 }
 
-/** React hook — returns current credentials and re-renders on change */
+/** React hook — returns current credentials and re-renders on change.
+ *  `isLoading` is true until the initial AsyncStorage read completes,
+ *  preventing a flash of the "Premium only" gate while credentials load. */
 export function useChatStore() {
   const [creds, setCreds] = useState<ChatCredentials | null>(_cached);
+  const [isLoading, setIsLoading] = useState(!_loaded);
 
   useEffect(() => {
-    // Load from storage on mount if not already cached
-    if (!_cached) {
+    if (!_loaded) {
       loadChatCredentials().then((c) => {
-        if (c) setCreds(c);
+        setCreds(c);
+        setIsLoading(false);
       });
+    } else {
+      // Already loaded (e.g. saveChatCredentials was called before mount)
+      setCreds(_cached);
+      setIsLoading(false);
     }
 
     const listener = () => {
       setCreds(_cached ? { ..._cached } : null);
+      setIsLoading(false);
     };
     _listeners.push(listener);
     return () => {
@@ -77,5 +89,6 @@ export function useChatStore() {
     orderId: creds?.orderId ?? null,
     chatToken: creds?.chatToken ?? null,
     hasAccess: !!creds,
+    isLoading,
   };
 }

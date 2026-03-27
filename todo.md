@@ -288,3 +288,7 @@
 - [x] Add Download button to purchase success screen (triggers actual file download)
 - [x] Fix Downloads tab: show order downloads by orderId without requiring sign-in
 - [x] Remove in-app rate/review popup from purchase success screen (keep only email follow-up)
+
+## Bug: Captain Bob Button Does Nothing
+- [x] Diagnose why Captain Bob button on purchase success screen does nothing
+- [x] Fix Captain Bob chat opening after Premium purchase

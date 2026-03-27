@@ -187,7 +187,7 @@ export default function CaptainBobScreen() {
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
 
-  const { orderId, chatToken } = useChatStore();
+  const { orderId, chatToken, isLoading: credentialsLoading } = useChatStore();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -348,6 +348,17 @@ export default function CaptainBobScreen() {
       setIsDevUnlocking(false);
     }
   };
+
+  // Wait for AsyncStorage to finish loading before deciding whether to show NoAccessState.
+  // Without this, navigating from purchase-success causes a flash of the gate screen
+  // because _cached hasn't been read yet on the first render.
+  if (credentialsLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top, alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   if (!hasCredentials) {
     return (
