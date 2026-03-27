@@ -22,6 +22,21 @@ import { useColors } from '@/hooks/use-colors';
 import { PRODUCTS, type ProductTier } from '@/constants/products';
 import { trpc } from '@/lib/trpc';
 
+// Web-only: Stripe Elements card form (lazy imported to avoid native bundling issues)
+let StripeWebCheckout: React.ComponentType<{
+  clientSecret: string;
+  amount: number;
+  onSuccess: () => void;
+  onError: (msg: string) => void;
+  onCancel: () => void;
+}> | null = null;
+
+if (Platform.OS === 'web') {
+  // Dynamic require so Metro doesn't bundle @stripe/react-stripe-js on native
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  StripeWebCheckout = require('@/components/stripe-web-checkout').StripeWebCheckout;
+}
+
 export default function CheckoutScreen() {
   const { tier } = useLocalSearchParams<{ tier: string }>();
   const router = useRouter();
@@ -35,10 +50,38 @@ export default function CheckoutScreen() {
   const [email, setEmail] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Web-specific state: after createPaymentIntent, show the Stripe Elements form
+  const [webClientSecret, setWebClientSecret] = useState<string | null>(null);
+  const [webOrderId, setWebOrderId] = useState<number | null>(null);
+  const [webPaymentIntentId, setWebPaymentIntentId] = useState<string | null>(null);
+  const [webError, setWebError] = useState<string | null>(null);
+
   const createPaymentIntent = trpc.orders.createPaymentIntent.useMutation();
   const confirmPayment = trpc.orders.confirmPayment.useMutation();
 
   const isFormValid = email.includes('@') && email.includes('.');
+
+  // Called after Stripe Elements confirms payment on web
+  async function handleWebPaymentSuccess() {
+    if (!webOrderId) return;
+    setIsProcessing(true);
+    try {
+      const confirmation = await confirmPayment.mutateAsync({
+        orderId: webOrderId,
+        stripePaymentIntentId: webPaymentIntentId ?? undefined,
+      });
+      router.replace({
+        pathname: '/purchase-success',
+        params: {
+          orderId: String(confirmation.orderId),
+          productTier: confirmation.productTier,
+        },
+      });
+    } catch (error: any) {
+      setWebError(error?.message ?? 'Payment confirmation failed. Please contact support.');
+      setIsProcessing(false);
+    }
+  }
 
   async function handlePay() {
     if (!isFormValid) return;
@@ -47,6 +90,7 @@ export default function CheckoutScreen() {
     }
 
     setIsProcessing(true);
+    setWebError(null);
     try {
       // Step 1: Create PaymentIntent on server
       const intentResult = await createPaymentIntent.mutateAsync({
@@ -55,7 +99,7 @@ export default function CheckoutScreen() {
       });
 
       if (!intentResult.clientSecret || !intentResult.stripeConfigured) {
-        // Demo / Stripe not configured — fall through to confirm directly
+        // Demo / Stripe not configured — confirm directly
         const confirmation = await confirmPayment.mutateAsync({
           orderId: intentResult.orderId,
         });
@@ -72,7 +116,16 @@ export default function CheckoutScreen() {
         return;
       }
 
-      // Step 2 & 3: Present the Stripe Payment Sheet
+      if (Platform.OS === 'web') {
+        // Web: store clientSecret and show Stripe Elements form
+        setWebClientSecret(intentResult.clientSecret);
+        setWebOrderId(intentResult.orderId);
+        setWebPaymentIntentId(intentResult.stripePaymentIntentId ?? null);
+        setIsProcessing(false);
+        return;
+      }
+
+      // Native: use Stripe PaymentSheet
       const { error: paymentError } = await stripePayment.presentPaymentSheet({
         clientSecret: intentResult.clientSecret,
         email: email.trim(),
@@ -92,16 +145,12 @@ export default function CheckoutScreen() {
         throw new Error(paymentError.message);
       }
 
-      // Step 4: Payment confirmed by Stripe — tell our server
       const confirmation = await confirmPayment.mutateAsync({
         orderId: intentResult.orderId,
         stripePaymentIntentId: intentResult.stripePaymentIntentId ?? undefined,
       });
 
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace({
         pathname: '/purchase-success',
         params: {
@@ -113,11 +162,15 @@ export default function CheckoutScreen() {
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
-      Alert.alert(
-        'Payment Failed',
-        error?.message ?? 'Something went wrong. Please try again.',
-        [{ text: 'OK' }]
-      );
+      if (Platform.OS === 'web') {
+        setWebError(error?.message ?? 'Something went wrong. Please try again.');
+      } else {
+        Alert.alert(
+          'Payment Failed',
+          error?.message ?? 'Something went wrong. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -127,10 +180,24 @@ export default function CheckoutScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 12 }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable
+          onPress={() => {
+            if (webClientSecret) {
+              // Cancel web payment — go back to email form
+              setWebClientSecret(null);
+              setWebOrderId(null);
+              setWebPaymentIntentId(null);
+            } else {
+              router.back();
+            }
+          }}
+          style={styles.backBtn}
+        >
           <IconSymbol name="chevron.left" size={20} color={colors.foreground} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Checkout</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+          {webClientSecret ? 'Enter Payment Details' : 'Checkout'}
+        </Text>
         <View style={styles.secureTag}>
           <IconSymbol name="lock.fill" size={12} color={colors.success} />
           <Text style={[styles.secureText, { color: colors.success }]}>Secure</Text>
@@ -145,7 +212,7 @@ export default function CheckoutScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 120 }}
         >
-          {/* Order Summary */}
+          {/* Order Summary — always visible */}
           <View style={[styles.orderSummary, { backgroundColor: accentColor + '12', borderColor: accentColor + '44' }]}>
             <View style={styles.orderRow}>
               <View style={{ flex: 1 }}>
@@ -162,113 +229,143 @@ export default function CheckoutScreen() {
             </View>
           </View>
 
-          {/* Expo Go notice — payment not available in Expo Go */}
+          {/* Expo Go notice */}
           {isExpoGo && (
             <View style={[styles.expoGoNotice, { backgroundColor: colors.warning + '18', borderColor: colors.warning + '55' }]}>
               <Text style={[styles.expoGoNoticeTitle, { color: colors.foreground }]}>Payment Available in Published App</Text>
               <Text style={[styles.expoGoNoticeBody, { color: colors.muted }]}>
-                Secure payments require the published app and cannot run in Expo Go. All other features work normally here. The full payment flow will be available once the app is published.
+                Secure payments require the published app and cannot run in Expo Go. All other features work normally here.
               </Text>
             </View>
           )}
 
-          {/* Email — needed before opening Payment Sheet */}
-          <View style={styles.formSection}>
-            <Text style={[styles.formSectionTitle, { color: colors.foreground }]}>
-              Contact Information
-            </Text>
-            <Text style={[styles.formSectionSubtitle, { color: colors.muted }]}>
-              Your download link will be sent here
-            </Text>
-            <FormField
-              label="Email Address"
-              placeholder="you@example.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              colors={colors}
-            />
-          </View>
-
-          {/* Payment method info */}
-          <View style={[styles.paymentInfoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={styles.paymentInfoRow}>
-              <IconSymbol name="lock.fill" size={16} color={accentColor} />
-              <Text style={[styles.paymentInfoTitle, { color: colors.foreground }]}>
-                Secure Payment via Stripe
-              </Text>
+          {/* Web error message */}
+          {webError && Platform.OS === 'web' && (
+            <View style={[styles.errorBanner, { backgroundColor: colors.error + '18', borderColor: colors.error + '55' }]}>
+              <Text style={[styles.errorBannerText, { color: colors.error }]}>{webError}</Text>
             </View>
-            <Text style={[styles.paymentInfoBody, { color: colors.muted }]}>
-              Tap "Pay Now" to open the secure Stripe payment sheet. Accepts all major cards, Apple Pay, and Google Pay.
-            </Text>
-            <View style={styles.cardBrands}>
-              {['VISA', 'MC', 'AMEX', 'Apple Pay', 'G Pay'].map((brand) => (
-                <View key={brand} style={[styles.cardBrandBadge, { borderColor: colors.border, backgroundColor: colors.background }]}>
-                  <Text style={[styles.cardBrandText, { color: colors.muted }]}>{brand}</Text>
+          )}
+
+          {/* WEB: Show Stripe Elements form after createPaymentIntent */}
+          {Platform.OS === 'web' && webClientSecret && StripeWebCheckout ? (
+            <View style={{ marginTop: 8 }}>
+              <StripeWebCheckout
+                clientSecret={webClientSecret}
+                amount={product.price}
+                onSuccess={handleWebPaymentSuccess}
+                onError={(msg) => setWebError(msg)}
+                onCancel={() => {
+                  setWebClientSecret(null);
+                  setWebOrderId(null);
+                  setWebPaymentIntentId(null);
+                }}
+              />
+            </View>
+          ) : (
+            <>
+              {/* Email field */}
+              <View style={styles.formSection}>
+                <Text style={[styles.formSectionTitle, { color: colors.foreground }]}>
+                  Contact Information
+                </Text>
+                <Text style={[styles.formSectionSubtitle, { color: colors.muted }]}>
+                  Your download link will be sent here
+                </Text>
+                <FormField
+                  label="Email Address"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  colors={colors}
+                />
+              </View>
+
+              {/* Payment method info */}
+              <View style={[styles.paymentInfoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={styles.paymentInfoRow}>
+                  <IconSymbol name="lock.fill" size={16} color={accentColor} />
+                  <Text style={[styles.paymentInfoTitle, { color: colors.foreground }]}>
+                    Secure Payment via Stripe
+                  </Text>
                 </View>
-              ))}
-            </View>
-          </View>
+                <Text style={[styles.paymentInfoBody, { color: colors.muted }]}>
+                  {Platform.OS === 'web'
+                    ? 'Enter your email above and click "Pay Now" to securely enter your card details. Accepts all major cards.'
+                    : 'Tap "Pay Now" to open the secure Stripe payment sheet. Accepts all major cards, Apple Pay, and Google Pay.'}
+                </Text>
+                <View style={styles.cardBrands}>
+                  {['VISA', 'MC', 'AMEX', 'Apple Pay', 'G Pay'].map((brand) => (
+                    <View key={brand} style={[styles.cardBrandBadge, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                      <Text style={[styles.cardBrandText, { color: colors.muted }]}>{brand}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
 
-          {/* Security note */}
-          <View style={[styles.securityNote, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <IconSymbol name="lock.fill" size={16} color={colors.muted} />
-            <Text style={[styles.securityNoteText, { color: colors.muted }]}>
-              Your payment is encrypted and processed securely via Stripe. We never store your card details.
-            </Text>
-          </View>
+              {/* Security note */}
+              <View style={[styles.securityNote, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <IconSymbol name="lock.fill" size={16} color={colors.muted} />
+                <Text style={[styles.securityNoteText, { color: colors.muted }]}>
+                  Your payment is encrypted and processed securely via Stripe. We never store your card details.
+                </Text>
+              </View>
+            </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Sticky Pay Button */}
-      <View
-        style={[
-          styles.stickyBottom,
-          {
-            backgroundColor: colors.surface,
-            borderTopColor: colors.border,
-            paddingBottom: insets.bottom + 12,
-          },
-        ]}
-      >
-        <Pressable
-          style={({ pressed }) => [
-            styles.payButton,
-            { backgroundColor: isFormValid ? accentColor : colors.border },
-            pressed && isFormValid && { opacity: 0.85 },
+      {/* Sticky Pay Button — only shown on email entry step (not when Stripe Elements is visible) */}
+      {!webClientSecret && (
+        <View
+          style={[
+            styles.stickyBottom,
+            {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.border,
+              paddingBottom: insets.bottom + 12,
+            },
           ]}
-          onPress={handlePay}
-          disabled={!isFormValid || isProcessing}
         >
-          {isProcessing ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <>
-              <IconSymbol name="lock.fill" size={18} color="#FFFFFF" />
-              <Text style={styles.payButtonText}>
-                Pay {product.priceDisplay} Now
-              </Text>
-            </>
-          )}
-        </Pressable>
-        <Text style={[styles.refundNote, { color: colors.muted }]}>
-          🔒 All sales are final. Digital downloads are non-refundable.{" "}
-          <Text
-            style={{ color: colors.primary, textDecorationLine: "underline" }}
-            onPress={() => router.push("/no-refunds-policy")}
+          <Pressable
+            style={({ pressed }) => [
+              styles.payButton,
+              { backgroundColor: isFormValid ? accentColor : colors.border },
+              pressed && isFormValid && { opacity: 0.85 },
+            ]}
+            onPress={handlePay}
+            disabled={!isFormValid || isProcessing || isExpoGo}
           >
-            View our Sales Policy.
+            {isProcessing ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <>
+                <IconSymbol name="lock.fill" size={18} color="#FFFFFF" />
+                <Text style={styles.payButtonText}>
+                  Pay {product.priceDisplay} Now
+                </Text>
+              </>
+            )}
+          </Pressable>
+          <Text style={[styles.refundNote, { color: colors.muted }]}>
+            All digital downloads are non-refundable.{" "}
+            <Text
+              style={{ color: colors.primary, textDecorationLine: "underline" }}
+              onPress={() => router.push("/no-refunds-policy")}
+            >
+              View our Sales Policy.
+            </Text>
+            {"  |  "}
+            <Text
+              style={{ color: colors.primary, textDecorationLine: "underline" }}
+              onPress={() => router.push("/privacy-policy")}
+            >
+              Privacy Policy.
+            </Text>
           </Text>
-          {"  |  "}
-          <Text
-            style={{ color: colors.primary, textDecorationLine: "underline" }}
-            onPress={() => router.push("/privacy-policy")}
-          >
-            Privacy Policy.
-          </Text>
-        </Text>
-      </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -283,7 +380,6 @@ interface FormFieldProps {
   secureTextEntry?: boolean;
   colors: ReturnType<typeof useColors>;
 }
-
 function FormField({
   label,
   placeholder,
@@ -505,5 +601,17 @@ const styles = StyleSheet.create({
   expoGoNoticeBody: {
     fontSize: 13,
     lineHeight: 19,
+  },
+  errorBanner: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+  },
+  errorBannerText: {
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '500',
   },
 });

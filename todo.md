@@ -252,3 +252,13 @@
 - [x] Server health confirmed
 - [x] Resend domain verified (championcardboardboats.com) — test email sent successfully
 - [x] All 18 environment variables set
+
+## Web Checkout (Stripe.js) — Deploy to championcardboardboats.com
+- [x] Install @stripe/stripe-js and @stripe/react-stripe-js
+- [x] Build web checkout screen using Stripe Elements (card input, payment confirmation)
+- [x] Update server to handle Stripe.js payment confirmation (confirmPayment vs native PaymentSheet)
+- [x] Create platform-aware checkout: Stripe.js on web, native PaymentSheet on iOS/Android
+- [x] Fix any web-only layout issues (navigation, modals, safe area)
+- [ ] Test full purchase flow on web (Basic + Premium) — requires live Stripe test
+- [ ] Confirm Captain Bob unlocks after web purchase — requires live Stripe test
+- [ ] Confirm download email sends after web purchase — requires live Stripe test
