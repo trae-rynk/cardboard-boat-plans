@@ -278,6 +278,25 @@ export const appRouter = router({
       }),
 
     /**
+     * Get downloads for a list of orderIds (guest access — no auth required).
+     * Used by the Downloads tab when the customer hasn't signed in.
+     */
+    forOrders: publicProcedure
+      .input(z.object({ orderIds: z.array(z.number()).max(10) }))
+      .query(async ({ input }) => {
+        if (input.orderIds.length === 0) return [];
+        const results = await Promise.all(
+          input.orderIds.map(async (orderId) => {
+            const order = await db.getOrderById(orderId);
+            if (!order || order.status !== "paid") return [];
+            const dls = await db.getDownloadsByOrderId(orderId);
+            return dls.map((d) => ({ ...d, order }));
+          })
+        );
+        return results.flat();
+      }),
+
+    /**
      * Get all downloads for the logged-in user across all their orders.
      */
     myDownloads: protectedProcedure.query(async ({ ctx }) => {

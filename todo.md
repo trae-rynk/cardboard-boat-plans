@@ -283,3 +283,8 @@
 - [x] Fix download files: remove video/unknown file entries, only show correct PDF files
 - [x] Fix Captain Bob unlock: chatToken now passed via route params and saved to chat-store immediately
 - [x] Fix back navigation: changed router.replace to router.push for Captain Bob button
+
+## UX Improvements (post-test-purchase feedback)
+- [x] Add Download button to purchase success screen (triggers actual file download)
+- [x] Fix Downloads tab: show order downloads by orderId without requiring sign-in
+- [x] Remove in-app rate/review popup from purchase success screen (keep only email follow-up)

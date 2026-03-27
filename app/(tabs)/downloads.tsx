@@ -14,74 +14,40 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { ScreenContainer } from '@/components/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { StarRatingDisplay } from '@/components/star-rating';
 import { useColors } from '@/hooks/use-colors';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/hooks/use-auth';
+import { useOrderStore } from '@/lib/order-store';
 import type { ProductTier } from '@/constants/products';
 
 export default function DownloadsScreen() {
   const colors = useColors();
   const router = useRouter();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { orderIds } = useOrderStore();
 
+  // Guest path: fetch downloads by locally-stored orderIds (no auth required)
+  const {
+    data: guestDownloads,
+    isLoading: guestLoading,
+    refetch: guestRefetch,
+  } = trpc.downloads.forOrders.useQuery(
+    { orderIds },
+    { enabled: !isAuthenticated && orderIds.length > 0 }
+  );
+
+  // Authenticated path: fetch all downloads for the signed-in user
   const {
     data: myDownloads,
-    isLoading,
-    refetch,
+    isLoading: authDownloadsLoading,
+    refetch: authRefetch,
   } = trpc.downloads.myDownloads.useQuery(undefined, {
     enabled: isAuthenticated,
   });
 
-  if (authLoading) {
-    return (
-      <ScreenContainer className="items-center justify-center">
-        <ActivityIndicator color={colors.primary} />
-      </ScreenContainer>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <ScreenContainer>
-        <View style={[styles.header, { backgroundColor: colors.primary }]}>
-          <Text style={styles.headerTitle}>My Downloads</Text>
-          <Text style={styles.headerSubtitle}>Your purchased files</Text>
-        </View>
-        <View style={styles.emptyContainer}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
-            <IconSymbol name="person.fill" size={40} color={colors.muted} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Sign In Required</Text>
-          <Text style={[styles.emptyBody, { color: colors.muted }]}>
-            Sign in to access your purchased downloads and order history.
-          </Text>
-          <Pressable
-            style={({ pressed }) => [
-              styles.signInBtn,
-              { backgroundColor: colors.primary },
-              pressed && { opacity: 0.85 },
-            ]}
-            onPress={() => router.push('/oauth/callback' as any)}
-          >
-            <Text style={styles.signInBtnText}>Sign In</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              styles.browseBtn,
-              { borderColor: colors.border },
-              pressed && { opacity: 0.7 },
-            ]}
-            onPress={() => router.push('/(tabs)/packages' as any)}
-          >
-            <Text style={[styles.browseBtnText, { color: colors.primary }]}>
-              Browse Packages
-            </Text>
-          </Pressable>
-        </View>
-      </ScreenContainer>
-    );
-  }
+  const downloads = isAuthenticated ? myDownloads : guestDownloads;
+  const isLoading = authLoading || (isAuthenticated ? authDownloadsLoading : guestLoading);
+  const refetch = isAuthenticated ? authRefetch : guestRefetch;
 
   if (isLoading) {
     return (
@@ -96,7 +62,8 @@ export default function DownloadsScreen() {
     );
   }
 
-  if (!myDownloads || myDownloads.length === 0) {
+  // No purchases found (guest with no saved orders, or signed-in with no orders)
+  if (!downloads || downloads.length === 0) {
     return (
       <ScreenContainer>
         <View style={[styles.header, { backgroundColor: colors.primary }]}>
@@ -109,18 +76,18 @@ export default function DownloadsScreen() {
           </View>
           <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Purchases Yet</Text>
           <Text style={[styles.emptyBody, { color: colors.muted }]}>
-            Your purchased plans and resources will appear here after checkout.
+            Your purchased plans will appear here after checkout. Files are saved to this device automatically.
           </Text>
           <Pressable
             style={({ pressed }) => [
-              styles.signInBtn,
+              styles.primaryBtn,
               { backgroundColor: colors.primary },
               pressed && { opacity: 0.85 },
             ]}
             onPress={() => router.push('/(tabs)/packages' as any)}
           >
             <IconSymbol name="tag.fill" size={16} color="#FFFFFF" />
-            <Text style={styles.signInBtnText}>View Packages</Text>
+            <Text style={styles.primaryBtnText}>View Packages</Text>
           </Pressable>
         </View>
       </ScreenContainer>
@@ -132,12 +99,12 @@ export default function DownloadsScreen() {
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <Text style={styles.headerTitle}>My Downloads</Text>
         <Text style={styles.headerSubtitle}>
-          {myDownloads.length} file{myDownloads.length !== 1 ? 's' : ''} available
+          {downloads.length} file{downloads.length !== 1 ? 's' : ''} available
         </Text>
       </View>
 
       <FlatList
-        data={myDownloads}
+        data={downloads}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={{ padding: 16, gap: 12 }}
         showsVerticalScrollIndicator={false}
@@ -153,7 +120,9 @@ export default function DownloadsScreen() {
           <View style={[styles.welcomeCard, { backgroundColor: colors.success + '12', borderColor: colors.success + '33' }]}>
             <IconSymbol name="checkmark.seal.fill" size={18} color={colors.success} />
             <Text style={[styles.welcomeText, { color: colors.success }]}>
-              Welcome back, {user?.name ?? 'Builder'}! Your files are ready.
+              {isAuthenticated
+                ? `Welcome back, ${user?.name ?? 'Builder'}! Your files are ready.`
+                : 'Your purchase is confirmed. Files are ready to download.'}
             </Text>
           </View>
         }
@@ -183,31 +152,13 @@ interface DownloadCardProps {
 
 function DownloadCard({ download, colors }: DownloadCardProps) {
   const [isDownloading, setIsDownloading] = useState(false);
-  const router = useRouter();
-  const productTier = download.order.productTier as ProductTier;
+  const isPremium = download.order.productTier === 'premium';
+  const accentColor = isPremium ? colors.accent : colors.primary;
 
-  // Only show review button on the first asset per order (avoid duplicates)
-  const isFirstAsset = download.assetType === 'pdf_plans';
-
-  // Fetch the order's guestReviewToken so the review button can deep-link correctly
-  const { data: orderData } = trpc.orders.getOrder.useQuery(
-    { orderId: download.order.id },
-    { enabled: isFirstAsset }
-  );
-  const guestReviewToken = orderData?.guestReviewToken ?? '';
-
-  const { data: myReview } = trpc.reviews.myReview.useQuery(
-    { orderId: download.order.id, guestReviewToken },
-    { enabled: isFirstAsset && !!guestReviewToken }
-  );
   const resolveToken = trpc.downloads.resolveToken.useQuery(
     { token: download.token },
     { enabled: false }
   );
-
-  const isVideo = download.assetType === 'video_series';
-  const isPremium = download.order.productTier === 'premium';
-  const accentColor = isPremium ? colors.accent : colors.primary;
 
   const fileSizeLabel = download.fileSizeBytes
     ? download.fileSizeBytes > 1_000_000_000
@@ -231,10 +182,18 @@ function DownloadCard({ download, colors }: DownloadCardProps) {
     try {
       const result = await resolveToken.refetch();
       if (result.data?.url) {
-        await Linking.openURL(result.data.url);
+        if (Platform.OS === 'web') {
+          window.open(result.data.url, '_blank');
+        } else {
+          await Linking.openURL(result.data.url);
+        }
       }
     } catch (error: any) {
-      Alert.alert('Download Error', error?.message ?? 'Could not start download. Please try again.');
+      if (Platform.OS === 'web') {
+        alert('Download Error: ' + (error?.message ?? 'Could not start download. Please try again.'));
+      } else {
+        Alert.alert('Download Error', error?.message ?? 'Could not start download. Please try again.');
+      }
     } finally {
       setIsDownloading(false);
     }
@@ -245,11 +204,7 @@ function DownloadCard({ download, colors }: DownloadCardProps) {
       {/* Card Header */}
       <View style={styles.cardHeader}>
         <View style={[styles.assetIcon, { backgroundColor: accentColor + '18' }]}>
-          <IconSymbol
-            name={isVideo ? 'play.circle.fill' : 'doc.fill'}
-            size={24}
-            color={accentColor}
-          />
+          <IconSymbol name="doc.fill" size={24} color={accentColor} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.downloadName, { color: colors.foreground }]}>
@@ -295,6 +250,7 @@ function DownloadCard({ download, colors }: DownloadCardProps) {
           styles.downloadBtn,
           { backgroundColor: accentColor },
           pressed && { opacity: 0.85 },
+          isDownloading && { opacity: 0.6 },
         ]}
         onPress={handleDownload}
         disabled={isDownloading}
@@ -303,56 +259,20 @@ function DownloadCard({ download, colors }: DownloadCardProps) {
           <ActivityIndicator color="#FFFFFF" size="small" />
         ) : (
           <>
-            <IconSymbol
-              name={isVideo ? 'play.circle.fill' : 'arrow.down.to.line'}
-              size={18}
-              color="#FFFFFF"
-            />
-            <Text style={styles.downloadBtnText}>
-              {isVideo ? 'Watch Videos' : 'Download PDF'}
-            </Text>
+            <IconSymbol name="arrow.down.circle.fill" size={18} color="#FFFFFF" />
+            <Text style={styles.downloadBtnText}>Download PDF</Text>
           </>
         )}
       </Pressable>
-
-      {/* Write / Edit Review Button (shown only on pdf_plans asset) */}
-      {isFirstAsset && !!guestReviewToken && (
-        <Pressable
-          style={({ pressed }) => [
-            styles.reviewBtn,
-            { borderColor: accentColor, backgroundColor: accentColor + '10' },
-            pressed && { opacity: 0.75 },
-          ]}
-          onPress={() =>
-            router.push({ pathname: '/write-review', params: { orderId: download.order.id, token: guestReviewToken } } as any)
-          }
-        >
-          {myReview ? (
-            <>
-              <View style={styles.reviewBtnLeft}>
-                <IconSymbol name="pencil" size={15} color={accentColor} />
-                <Text style={[styles.reviewBtnText, { color: accentColor }]}>Edit Your Review</Text>
-              </View>
-              <StarRatingDisplay rating={myReview.rating} size={13} />
-            </>
-          ) : (
-            <>
-              <IconSymbol name="star.fill" size={15} color={accentColor} />
-              <Text style={[styles.reviewBtnText, { color: accentColor }]}>Write a Review</Text>
-            </>
-          )}
-        </Pressable>
-      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   header: {
-    paddingTop: 16,
-    paddingBottom: 20,
     paddingHorizontal: 20,
-    gap: 4,
+    paddingTop: 20,
+    paddingBottom: 20,
   },
   headerTitle: {
     fontSize: 24,
@@ -360,9 +280,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   headerSubtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
-    fontWeight: '500',
+    marginTop: 4,
   },
   loadingContainer: {
     flex: 1,
@@ -373,7 +293,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 32,
+    paddingHorizontal: 32,
     gap: 16,
   },
   emptyIcon: {
@@ -384,38 +304,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyTitle: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     textAlign: 'center',
   },
   emptyBody: {
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 21,
     textAlign: 'center',
   },
-  signInBtn: {
+  primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 14,
-    marginTop: 8,
+    marginTop: 4,
   },
-  signInBtnText: {
+  primaryBtnText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  browseBtn: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  browseBtnText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   welcomeCard: {
     flexDirection: 'row',
@@ -427,25 +337,21 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   welcomeText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     flex: 1,
+    lineHeight: 18,
   },
   downloadCard: {
     borderRadius: 14,
     borderWidth: 1,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    padding: 16,
+    gap: 12,
   },
   cardHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
-    padding: 16,
   },
   assetIcon: {
     width: 44,
@@ -457,7 +363,7 @@ const styles = StyleSheet.create({
   downloadName: {
     fontSize: 15,
     fontWeight: '700',
-    lineHeight: 21,
+    lineHeight: 20,
   },
   metaRow: {
     flexDirection: 'row',
@@ -472,21 +378,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   tierBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 8,
-    alignSelf: 'flex-start',
   },
   tierBadgeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
   },
   orderInfo: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    alignItems: 'center',
+    paddingTop: 10,
     borderTopWidth: 1,
   },
   orderInfoRow: {
@@ -502,35 +406,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    margin: 12,
-    marginTop: 4,
     paddingVertical: 13,
-    borderRadius: 12,
+    borderRadius: 10,
   },
   downloadBtnText: {
     color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '700',
-  },
-  reviewBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginHorizontal: 12,
-    marginBottom: 12,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1.5,
-  },
-  reviewBtnLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  reviewBtnText: {
-    fontSize: 14,
     fontWeight: '700',
   },
 });

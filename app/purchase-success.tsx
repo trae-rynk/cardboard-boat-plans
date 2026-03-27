@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Text, View, Pressable, StyleSheet, Animated, Platform, ScrollView } from 'react-native';
+import { Text, View, Pressable, StyleSheet, Animated, Platform, ScrollView, Alert, Linking, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -7,8 +7,8 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/hooks/use-colors';
 import { PRODUCTS, type ProductTier } from '@/constants/products';
 import { trpc } from '@/lib/trpc';
-import { RateProductModal } from '@/components/rate-product-modal';
 import { saveChatCredentials } from '@/lib/chat-store';
+import { saveOrderId } from '@/lib/order-store';
 
 export default function PurchaseSuccessScreen() {
   const { orderId, productTier, chatToken: chatTokenParam } = useLocalSearchParams<{
@@ -22,9 +22,6 @@ export default function PurchaseSuccessScreen() {
 
   const product = PRODUCTS[(productTier as ProductTier) ?? 'basic'];
   const accentColor = productTier === 'premium' ? colors.accent : colors.primary;
-
-  // Rating modal state
-  const [ratingModalVisible, setRatingModalVisible] = useState(false);
 
   // Animation
   const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -46,10 +43,7 @@ export default function PurchaseSuccessScreen() {
         duration: 300,
         useNativeDriver: true,
       }),
-    ]).start(() => {
-      // Show the rating prompt 1.5s after the success animation completes
-      setTimeout(() => setRatingModalVisible(true), 1500);
-    });
+    ]).start();
   }, []);
 
   const { data: orderData } = trpc.orders.getOrder.useQuery(
@@ -62,11 +56,14 @@ export default function PurchaseSuccessScreen() {
     { enabled: !!orderId }
   );
 
-  const guestReviewToken = orderData?.guestReviewToken ?? '';
+  // Persist orderId locally so Downloads tab works without sign-in
+  useEffect(() => {
+    if (orderId) {
+      saveOrderId(Number(orderId)).catch(console.warn);
+    }
+  }, [orderId]);
 
-  // Save Captain Bob chat credentials for Premium orders.
-  // chatTokenParam comes directly from the confirmPayment response via route params.
-  // This is the most reliable source — orderData.chatToken is not stored in the orders table.
+  // Save Captain Bob chat credentials for Premium orders immediately from route params
   useEffect(() => {
     if (productTier === 'premium' && chatTokenParam) {
       saveChatCredentials(Number(orderId), chatTokenParam).catch(console.warn);
@@ -95,7 +92,7 @@ export default function PurchaseSuccessScreen() {
         <Animated.View style={[styles.textBlock, { opacity: fadeAnim }]}>
           <Text style={[styles.heading, { color: colors.foreground }]}>Purchase Complete!</Text>
           <Text style={[styles.subheading, { color: colors.muted }]}>
-            Thank you for your purchase. Your files are ready to download.
+            Thank you for your purchase. Your files are ready to download below.
           </Text>
 
           {/* Order Details */}
@@ -116,7 +113,7 @@ export default function PurchaseSuccessScreen() {
             </View>
           </View>
 
-          {/* Downloads */}
+          {/* Downloads — each with its own Download button */}
           {downloads && downloads.length > 0 && (
             <View style={styles.downloadsSection}>
               <Text style={[styles.downloadsTitle, { color: colors.foreground }]}>
@@ -132,37 +129,10 @@ export default function PurchaseSuccessScreen() {
               ))}
             </View>
           )}
-
-          {/* Rate Now button (secondary CTA — in case they dismiss the modal) */}
-          {!!guestReviewToken && (
-            <Pressable
-              style={({ pressed }) => [
-                styles.rateNowBtn,
-                { borderColor: accentColor, backgroundColor: accentColor + '10' },
-                pressed && { opacity: 0.75 },
-              ]}
-              onPress={() => setRatingModalVisible(true)}
-            >
-              <IconSymbol name="star.fill" size={16} color={accentColor} />
-              <Text style={[styles.rateNowText, { color: accentColor }]}>Rate Your Purchase</Text>
-            </Pressable>
-          )}
         </Animated.View>
 
         {/* Actions */}
         <Animated.View style={[styles.actions, { opacity: fadeAnim }]}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryBtn,
-              { backgroundColor: accentColor },
-              pressed && { opacity: 0.85 },
-            ]}
-            onPress={() => router.replace('/(tabs)/downloads' as any)}
-          >
-            <IconSymbol name="arrow.down.circle.fill" size={20} color="#FFFFFF" />
-            <Text style={styles.primaryBtnText}>View My Downloads</Text>
-          </Pressable>
-
           {productTier === 'premium' && (
             <Pressable
               style={({ pressed }) => [
@@ -189,17 +159,6 @@ export default function PurchaseSuccessScreen() {
           </Pressable>
         </Animated.View>
       </ScrollView>
-
-      {/* In-app rating modal */}
-      {!!guestReviewToken && (
-        <RateProductModal
-          visible={ratingModalVisible}
-          onClose={() => setRatingModalVisible(false)}
-          orderId={Number(orderId)}
-          guestReviewToken={guestReviewToken}
-          productTier={(productTier as ProductTier) ?? 'basic'}
-        />
-      )}
     </View>
   );
 }
@@ -217,8 +176,12 @@ interface DownloadItemProps {
 }
 
 function DownloadItem({ download, accentColor, colors }: DownloadItemProps) {
-  const iconName =
-    download.assetType === 'video_series' ? 'play.circle.fill' : 'doc.fill';
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const resolveToken = trpc.downloads.resolveToken.useQuery(
+    { token: download.token },
+    { enabled: false }
+  );
 
   const fileSizeLabel = download.fileSizeBytes
     ? download.fileSizeBytes > 1_000_000
@@ -226,18 +189,62 @@ function DownloadItem({ download, accentColor, colors }: DownloadItemProps) {
       : `${Math.round(download.fileSizeBytes / 1024)} KB`
     : '';
 
+  async function handleDownload() {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    setIsDownloading(true);
+    try {
+      const result = await resolveToken.refetch();
+      if (result.data?.url) {
+        if (Platform.OS === 'web') {
+          // On web, open in a new tab so the browser handles the download
+          window.open(result.data.url, '_blank');
+        } else {
+          await Linking.openURL(result.data.url);
+        }
+      }
+    } catch (error: any) {
+      if (Platform.OS === 'web') {
+        alert('Download Error: ' + (error?.message ?? 'Could not start download. Please try again.'));
+      } else {
+        Alert.alert('Download Error', error?.message ?? 'Could not start download. Please try again.');
+      }
+    } finally {
+      setIsDownloading(false);
+    }
+  }
+
   return (
     <View style={[styles.downloadItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <IconSymbol name={iconName as any} size={24} color={accentColor} />
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.downloadName, { color: colors.foreground }]}>{download.displayName}</Text>
-        {fileSizeLabel ? (
-          <Text style={[styles.downloadSize, { color: colors.muted }]}>{fileSizeLabel}</Text>
-        ) : null}
+      <View style={styles.downloadItemTop}>
+        <IconSymbol name="doc.fill" size={24} color={accentColor} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.downloadName, { color: colors.foreground }]}>{download.displayName}</Text>
+          {fileSizeLabel ? (
+            <Text style={[styles.downloadSize, { color: colors.muted }]}>{fileSizeLabel}</Text>
+          ) : null}
+        </View>
       </View>
-      <View style={[styles.readyBadge, { backgroundColor: colors.success + '18' }]}>
-        <Text style={[styles.readyText, { color: colors.success }]}>Ready</Text>
-      </View>
+      <Pressable
+        style={({ pressed }) => [
+          styles.downloadBtn,
+          { backgroundColor: accentColor },
+          pressed && { opacity: 0.85 },
+          isDownloading && { opacity: 0.6 },
+        ]}
+        onPress={handleDownload}
+        disabled={isDownloading}
+      >
+        {isDownloading ? (
+          <ActivityIndicator color="#FFFFFF" size="small" />
+        ) : (
+          <>
+            <IconSymbol name="arrow.down.circle.fill" size={18} color="#FFFFFF" />
+            <Text style={styles.downloadBtnText}>Download PDF</Text>
+          </>
+        )}
+      </Pressable>
     </View>
   );
 }
@@ -318,12 +325,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   downloadItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
+    gap: 12,
+  },
+  downloadItemTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   downloadName: {
     fontSize: 14,
@@ -334,46 +344,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  readyBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  readyText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  rateNowBtn: {
+  downloadBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    width: '100%',
     justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
   },
-  rateNowText: {
+  downloadBtnText: {
+    color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
   },
   actions: {
     width: '100%',
     gap: 12,
-  },
-  primaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 14,
-  },
-  primaryBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
   },
   secondaryBtn: {
     alignItems: 'center',
