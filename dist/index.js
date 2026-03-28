@@ -1,10 +1,34 @@
+"use strict";
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc2) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc2 = __getOwnPropDesc(from, key)) || desc2.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+
 // server/_core/index.ts
-import "dotenv/config";
-import express from "express";
-import { createServer } from "http";
-import net from "net";
-import path from "path";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
+var import_config = require("dotenv/config");
+var import_express = __toESM(require("express"));
+var import_http = require("http");
+var import_net = __toESM(require("net"));
+var import_path = __toESM(require("path"));
+var import_express2 = require("@trpc/server/adapters/express");
 
 // shared/const.ts
 var COOKIE_NAME = "app_session_id";
@@ -14,116 +38,116 @@ var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
 
 // server/db.ts
-import { and, desc, eq, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+var import_drizzle_orm = require("drizzle-orm");
+var import_mysql2 = require("drizzle-orm/mysql2");
 
 // drizzle/schema.ts
-import { boolean, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
-var users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
-  name: text("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull()
+var import_mysql_core = require("drizzle-orm/mysql-core");
+var users = (0, import_mysql_core.mysqlTable)("users", {
+  id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+  openId: (0, import_mysql_core.varchar)("openId", { length: 64 }).notNull().unique(),
+  name: (0, import_mysql_core.text)("name"),
+  email: (0, import_mysql_core.varchar)("email", { length: 320 }),
+  loginMethod: (0, import_mysql_core.varchar)("loginMethod", { length: 64 }),
+  role: (0, import_mysql_core.mysqlEnum)("role", ["user", "admin"]).default("user").notNull(),
+  createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
+  updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastSignedIn: (0, import_mysql_core.timestamp)("lastSignedIn").defaultNow().notNull()
 });
-var orders = mysqlTable("orders", {
-  id: int("id").autoincrement().primaryKey(),
+var orders = (0, import_mysql_core.mysqlTable)("orders", {
+  id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
   /** Null for guest purchases (email-based delivery) */
-  userId: int("userId"),
+  userId: (0, import_mysql_core.int)("userId"),
   /** Email used for purchase (for guest checkout and receipts) */
-  email: varchar("email", { length: 320 }).notNull(),
+  email: (0, import_mysql_core.varchar)("email", { length: 320 }).notNull(),
   /** Product tier purchased */
-  productTier: mysqlEnum("productTier", ["basic", "premium"]).notNull(),
+  productTier: (0, import_mysql_core.mysqlEnum)("productTier", ["basic", "premium"]).notNull(),
   /** Amount in cents */
-  amountCents: int("amountCents").notNull(),
+  amountCents: (0, import_mysql_core.int)("amountCents").notNull(),
   /** Stripe PaymentIntent ID */
-  stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 255 }),
+  stripePaymentIntentId: (0, import_mysql_core.varchar)("stripePaymentIntentId", { length: 255 }),
   /** Stripe client secret (temporary, used during checkout) */
-  stripeClientSecret: varchar("stripeClientSecret", { length: 512 }),
-  status: mysqlEnum("status", ["pending", "paid", "failed", "refunded"]).default("pending").notNull(),
+  stripeClientSecret: (0, import_mysql_core.varchar)("stripeClientSecret", { length: 512 }),
+  status: (0, import_mysql_core.mysqlEnum)("status", ["pending", "paid", "failed", "refunded"]).default("pending").notNull(),
   /**
    * Secure token that allows the purchaser to submit a review without signing in.
    * Generated at order creation, sent in the follow-up review email.
    */
-  guestReviewToken: varchar("guestReviewToken", { length: 128 }),
+  guestReviewToken: (0, import_mysql_core.varchar)("guestReviewToken", { length: 128 }),
   /** Timestamp when the 5-day follow-up review email was sent (null = not yet sent) */
-  reviewEmailSentAt: timestamp("reviewEmailSentAt"),
+  reviewEmailSentAt: (0, import_mysql_core.timestamp)("reviewEmailSentAt"),
   /** Timestamp when the review email is scheduled to be sent (createdAt + 5 days) */
-  reviewEmailScheduledAt: timestamp("reviewEmailScheduledAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+  reviewEmailScheduledAt: (0, import_mysql_core.timestamp)("reviewEmailScheduledAt"),
+  createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
+  updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull()
 });
-var downloads = mysqlTable("downloads", {
-  id: int("id").autoincrement().primaryKey(),
-  orderId: int("orderId").notNull(),
+var downloads = (0, import_mysql_core.mysqlTable)("downloads", {
+  id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+  orderId: (0, import_mysql_core.int)("orderId").notNull(),
   /** Secure random token used in download URL */
-  token: varchar("token", { length: 128 }).notNull().unique(),
+  token: (0, import_mysql_core.varchar)("token", { length: 128 }).notNull().unique(),
   /** Type of downloadable asset */
-  assetType: mysqlEnum("assetType", ["pdf_plans", "video_series", "design_hacks"]).notNull(),
+  assetType: (0, import_mysql_core.mysqlEnum)("assetType", ["pdf_plans", "video_series", "design_hacks"]).notNull(),
   /** Display name shown in My Downloads */
-  displayName: varchar("displayName", { length: 255 }).notNull(),
+  displayName: (0, import_mysql_core.varchar)("displayName", { length: 255 }).notNull(),
   /** File size in bytes for display */
-  fileSizeBytes: int("fileSizeBytes"),
+  fileSizeBytes: (0, import_mysql_core.int)("fileSizeBytes"),
   /** Whether this download has been used */
-  downloadCount: int("downloadCount").default(0).notNull(),
+  downloadCount: (0, import_mysql_core.int)("downloadCount").default(0).notNull(),
   /** Expiry — null means never expires */
-  expiresAt: timestamp("expiresAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
+  expiresAt: (0, import_mysql_core.timestamp)("expiresAt"),
+  createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
 });
-var reviews = mysqlTable("reviews", {
-  id: int("id").autoincrement().primaryKey(),
+var reviews = (0, import_mysql_core.mysqlTable)("reviews", {
+  id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
   /** The order that qualifies this review as a verified purchase */
-  orderId: int("orderId").notNull(),
+  orderId: (0, import_mysql_core.int)("orderId").notNull(),
   /** Email of the reviewer (from the order) */
-  email: varchar("email", { length: 320 }).notNull(),
+  email: (0, import_mysql_core.varchar)("email", { length: 320 }).notNull(),
   /** Which product tier is being reviewed */
-  productTier: mysqlEnum("productTier", ["basic", "premium"]).notNull(),
+  productTier: (0, import_mysql_core.mysqlEnum)("productTier", ["basic", "premium"]).notNull(),
   /** Star rating 1–5 */
-  rating: int("rating").notNull(),
+  rating: (0, import_mysql_core.int)("rating").notNull(),
   /** Optional written review title */
-  title: varchar("title", { length: 120 }),
+  title: (0, import_mysql_core.varchar)("title", { length: 120 }),
   /** Optional written review body */
-  body: text("body"),
+  body: (0, import_mysql_core.text)("body"),
   /** Display name shown on the review (buyer can choose what name to show) */
-  displayName: varchar("displayName", { length: 100 }),
+  displayName: (0, import_mysql_core.varchar)("displayName", { length: 100 }),
   /** Whether the review is visible publicly */
-  isPublished: boolean("isPublished").default(true).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+  isPublished: (0, import_mysql_core.boolean)("isPublished").default(true).notNull(),
+  createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
+  updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull()
 });
-var chatEntitlements = mysqlTable("chatEntitlements", {
-  id: int("id").autoincrement().primaryKey(),
+var chatEntitlements = (0, import_mysql_core.mysqlTable)("chatEntitlements", {
+  id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
   /** The original Premium order that created this entitlement */
-  orderId: int("orderId").notNull(),
+  orderId: (0, import_mysql_core.int)("orderId").notNull(),
   /** Customer email (from the order) */
-  email: varchar("email", { length: 320 }).notNull(),
+  email: (0, import_mysql_core.varchar)("email", { length: 320 }).notNull(),
   /** Token used to authenticate chat requests (same as guestReviewToken pattern) */
-  chatToken: varchar("chatToken", { length: 128 }).notNull().unique(),
+  chatToken: (0, import_mysql_core.varchar)("chatToken", { length: 128 }).notNull().unique(),
   /** When the current window started */
-  startsAt: timestamp("startsAt").notNull(),
+  startsAt: (0, import_mysql_core.timestamp)("startsAt").notNull(),
   /** When the current window expires (startsAt + 30 days, extended on renewal) */
-  expiresAt: timestamp("expiresAt").notNull(),
+  expiresAt: (0, import_mysql_core.timestamp)("expiresAt").notNull(),
   /** Total messages sent in the current window */
-  messageCount: int("messageCount").default(0).notNull(),
+  messageCount: (0, import_mysql_core.int)("messageCount").default(0).notNull(),
   /** Max messages allowed per window */
-  messageLimit: int("messageLimit").default(1e3).notNull(),
+  messageLimit: (0, import_mysql_core.int)("messageLimit").default(1e3).notNull(),
   /** Number of 30-day extensions purchased */
-  extensionCount: int("extensionCount").default(0).notNull(),
-  status: mysqlEnum("status", ["active", "expired", "suspended"]).default("active").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+  extensionCount: (0, import_mysql_core.int)("extensionCount").default(0).notNull(),
+  status: (0, import_mysql_core.mysqlEnum)("status", ["active", "expired", "suspended"]).default("active").notNull(),
+  createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
+  updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull()
 });
-var chatMessages = mysqlTable("chatMessages", {
-  id: int("id").autoincrement().primaryKey(),
-  entitlementId: int("entitlementId").notNull(),
+var chatMessages = (0, import_mysql_core.mysqlTable)("chatMessages", {
+  id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+  entitlementId: (0, import_mysql_core.int)("entitlementId").notNull(),
   /** 'user' = customer message, 'assistant' = Captain Bob reply */
-  role: mysqlEnum("role", ["user", "assistant"]).notNull(),
-  content: text("content").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
+  role: (0, import_mysql_core.mysqlEnum)("role", ["user", "assistant"]).notNull(),
+  content: (0, import_mysql_core.text)("content").notNull(),
+  createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
 });
 
 // server/_core/env.ts
@@ -139,12 +163,12 @@ var ENV = {
 };
 
 // server/db.ts
-import crypto from "crypto";
+var import_crypto = __toESM(require("crypto"));
 var _db = null;
 async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _db = (0, import_mysql2.drizzle)(process.env.DATABASE_URL);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -206,7 +230,7 @@ async function getUserByOpenId(openId) {
     console.warn("[Database] Cannot get user: database not available");
     return void 0;
   }
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  const result = await db.select().from(users).where((0, import_drizzle_orm.eq)(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function createOrder(data) {
@@ -215,7 +239,7 @@ async function createOrder(data) {
   const fiveDaysFromNow = new Date(Date.now() + 5 * 24 * 60 * 60 * 1e3);
   const orderData = {
     ...data,
-    guestReviewToken: data.guestReviewToken ?? crypto.randomBytes(32).toString("hex"),
+    guestReviewToken: data.guestReviewToken ?? import_crypto.default.randomBytes(32).toString("hex"),
     reviewEmailScheduledAt: data.reviewEmailScheduledAt ?? fiveDaysFromNow
   };
   const result = await db.insert(orders).values(orderData);
@@ -224,40 +248,40 @@ async function createOrder(data) {
 async function getOrderById(id) {
   const db = await getDb();
   if (!db) return null;
-  const rows = await db.select().from(orders).where(eq(orders.id, id));
+  const rows = await db.select().from(orders).where((0, import_drizzle_orm.eq)(orders.id, id));
   return rows[0] ?? null;
 }
 async function getOrderByStripePaymentIntentId(stripePaymentIntentId) {
   const db = await getDb();
   if (!db) return null;
-  const rows = await db.select().from(orders).where(eq(orders.stripePaymentIntentId, stripePaymentIntentId));
+  const rows = await db.select().from(orders).where((0, import_drizzle_orm.eq)(orders.stripePaymentIntentId, stripePaymentIntentId));
   return rows[0] ?? null;
 }
 async function updateOrderStatus(id, status, stripePaymentIntentId) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(orders).set({ status, ...stripePaymentIntentId ? { stripePaymentIntentId } : {} }).where(eq(orders.id, id));
+  await db.update(orders).set({ status, ...stripePaymentIntentId ? { stripePaymentIntentId } : {} }).where((0, import_drizzle_orm.eq)(orders.id, id));
 }
 async function markReviewEmailSent(orderId) {
   const db = await getDb();
   if (!db) return;
-  await db.update(orders).set({ reviewEmailSentAt: /* @__PURE__ */ new Date() }).where(eq(orders.id, orderId));
+  await db.update(orders).set({ reviewEmailSentAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm.eq)(orders.id, orderId));
 }
 async function getOrdersByUserId(userId) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+  return db.select().from(orders).where((0, import_drizzle_orm.eq)(orders.userId, userId)).orderBy((0, import_drizzle_orm.desc)(orders.createdAt));
 }
 async function getOrdersDueForReviewEmail() {
   const db = await getDb();
   if (!db) return [];
   const now = /* @__PURE__ */ new Date();
   return db.select().from(orders).where(
-    and(
-      eq(orders.status, "paid"),
-      sql`${orders.reviewEmailSentAt} IS NULL`,
-      sql`${orders.reviewEmailScheduledAt} IS NOT NULL`,
-      sql`${orders.reviewEmailScheduledAt} <= ${now}`
+    (0, import_drizzle_orm.and)(
+      (0, import_drizzle_orm.eq)(orders.status, "paid"),
+      import_drizzle_orm.sql`${orders.reviewEmailSentAt} IS NULL`,
+      import_drizzle_orm.sql`${orders.reviewEmailScheduledAt} IS NOT NULL`,
+      import_drizzle_orm.sql`${orders.reviewEmailScheduledAt} <= ${now}`
     )
   );
 }
@@ -267,7 +291,7 @@ async function createDownloadsForOrder(orderId, productTier) {
   const assets = [
     {
       orderId,
-      token: crypto.randomBytes(32).toString("hex"),
+      token: import_crypto.default.randomBytes(32).toString("hex"),
       assetType: "pdf_plans",
       displayName: productTier === "premium" ? "Premium Builder Plan Package (PDF)" : "Builder Plan Package (PDF)",
       fileSizeBytes: 42e5
@@ -279,12 +303,12 @@ async function createDownloadsForOrder(orderId, productTier) {
 async function getDownloadsByOrderId(orderId) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(downloads).where(eq(downloads.orderId, orderId));
+  return db.select().from(downloads).where((0, import_drizzle_orm.eq)(downloads.orderId, orderId));
 }
 async function getDownloadByToken(token) {
   const db = await getDb();
   if (!db) return null;
-  const rows = await db.select().from(downloads).where(eq(downloads.token, token));
+  const rows = await db.select().from(downloads).where((0, import_drizzle_orm.eq)(downloads.token, token));
   return rows[0] ?? null;
 }
 async function incrementDownloadCount(token) {
@@ -292,7 +316,7 @@ async function incrementDownloadCount(token) {
   if (!db) return;
   const row = await getDownloadByToken(token);
   if (!row) return;
-  await db.update(downloads).set({ downloadCount: row.downloadCount + 1 }).where(eq(downloads.token, token));
+  await db.update(downloads).set({ downloadCount: row.downloadCount + 1 }).where((0, import_drizzle_orm.eq)(downloads.token, token));
 }
 async function getDownloadsForUser(userId) {
   const userOrders = await getOrdersByUserId(userId);
@@ -314,28 +338,28 @@ async function createReview(data) {
 async function updateReview(id, orderId, data) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(reviews).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(and(eq(reviews.id, id), eq(reviews.orderId, orderId)));
+  await db.update(reviews).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm.and)((0, import_drizzle_orm.eq)(reviews.id, id), (0, import_drizzle_orm.eq)(reviews.orderId, orderId)));
 }
 async function deleteReview(id, orderId) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.delete(reviews).where(and(eq(reviews.id, id), eq(reviews.orderId, orderId)));
+  await db.delete(reviews).where((0, import_drizzle_orm.and)((0, import_drizzle_orm.eq)(reviews.id, id), (0, import_drizzle_orm.eq)(reviews.orderId, orderId)));
 }
 async function getReviewsByProductTier(productTier, limit = 20, offset = 0) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(reviews).where(and(eq(reviews.productTier, productTier), eq(reviews.isPublished, true))).orderBy(desc(reviews.createdAt)).limit(limit).offset(offset);
+  return db.select().from(reviews).where((0, import_drizzle_orm.and)((0, import_drizzle_orm.eq)(reviews.productTier, productTier), (0, import_drizzle_orm.eq)(reviews.isPublished, true))).orderBy((0, import_drizzle_orm.desc)(reviews.createdAt)).limit(limit).offset(offset);
 }
 async function getReviewByOrderId(orderId) {
   const db = await getDb();
   if (!db) return null;
-  const rows = await db.select().from(reviews).where(eq(reviews.orderId, orderId)).limit(1);
+  const rows = await db.select().from(reviews).where((0, import_drizzle_orm.eq)(reviews.orderId, orderId)).limit(1);
   return rows[0] ?? null;
 }
 async function getRatingStats(productTier) {
   const db = await getDb();
   if (!db) return { averageRating: 0, totalReviews: 0, distribution: {} };
-  const rows = await db.select({ rating: reviews.rating }).from(reviews).where(and(eq(reviews.productTier, productTier), eq(reviews.isPublished, true)));
+  const rows = await db.select({ rating: reviews.rating }).from(reviews).where((0, import_drizzle_orm.and)((0, import_drizzle_orm.eq)(reviews.productTier, productTier), (0, import_drizzle_orm.eq)(reviews.isPublished, true)));
   if (rows.length === 0) {
     return { averageRating: 0, totalReviews: 0, distribution: {} };
   }
@@ -355,10 +379,10 @@ async function verifyOrderReviewToken(orderId, token) {
   const db = await getDb();
   if (!db) return null;
   const rows = await db.select().from(orders).where(
-    and(
-      eq(orders.id, orderId),
-      eq(orders.guestReviewToken, token),
-      eq(orders.status, "paid")
+    (0, import_drizzle_orm.and)(
+      (0, import_drizzle_orm.eq)(orders.id, orderId),
+      (0, import_drizzle_orm.eq)(orders.guestReviewToken, token),
+      (0, import_drizzle_orm.eq)(orders.status, "paid")
     )
   ).limit(1);
   return rows[0] ?? null;
@@ -370,7 +394,7 @@ async function createChatEntitlement(orderId, email) {
   if (!db) throw new Error("Database not available");
   const now = /* @__PURE__ */ new Date();
   const expiresAt = new Date(now.getTime() + CHAT_WINDOW_DAYS * 24 * 60 * 60 * 1e3);
-  const chatToken = crypto.randomBytes(32).toString("hex");
+  const chatToken = import_crypto.default.randomBytes(32).toString("hex");
   const data = {
     orderId,
     email,
@@ -388,13 +412,13 @@ async function createChatEntitlement(orderId, email) {
 async function getEntitlementByToken(chatToken) {
   const db = await getDb();
   if (!db) return null;
-  const rows = await db.select().from(chatEntitlements).where(eq(chatEntitlements.chatToken, chatToken)).limit(1);
+  const rows = await db.select().from(chatEntitlements).where((0, import_drizzle_orm.eq)(chatEntitlements.chatToken, chatToken)).limit(1);
   return rows[0] ?? null;
 }
 async function getEntitlementByOrderId(orderId) {
   const db = await getDb();
   if (!db) return null;
-  const rows = await db.select().from(chatEntitlements).where(eq(chatEntitlements.orderId, orderId)).limit(1);
+  const rows = await db.select().from(chatEntitlements).where((0, import_drizzle_orm.eq)(chatEntitlements.orderId, orderId)).limit(1);
   return rows[0] ?? null;
 }
 async function incrementChatMessageCount(entitlementId, currentCount, limit) {
@@ -404,14 +428,14 @@ async function incrementChatMessageCount(entitlementId, currentCount, limit) {
   await db.update(chatEntitlements).set({
     messageCount: newCount,
     ...newCount >= limit ? { status: "expired" } : {}
-  }).where(eq(chatEntitlements.id, entitlementId));
+  }).where((0, import_drizzle_orm.eq)(chatEntitlements.id, entitlementId));
 }
 async function extendChatEntitlement(entitlementId, currentExpiresAt) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const base = currentExpiresAt < /* @__PURE__ */ new Date() ? /* @__PURE__ */ new Date() : currentExpiresAt;
   const newExpiresAt = new Date(base.getTime() + CHAT_WINDOW_DAYS * 24 * 60 * 60 * 1e3);
-  const rows = await db.select().from(chatEntitlements).where(eq(chatEntitlements.id, entitlementId)).limit(1);
+  const rows = await db.select().from(chatEntitlements).where((0, import_drizzle_orm.eq)(chatEntitlements.id, entitlementId)).limit(1);
   const current = rows[0];
   if (!current) throw new Error("Entitlement not found");
   await db.update(chatEntitlements).set({
@@ -419,7 +443,7 @@ async function extendChatEntitlement(entitlementId, currentExpiresAt) {
     messageCount: 0,
     status: "active",
     extensionCount: current.extensionCount + 1
-  }).where(eq(chatEntitlements.id, entitlementId));
+  }).where((0, import_drizzle_orm.eq)(chatEntitlements.id, entitlementId));
   return newExpiresAt;
 }
 async function saveChatMessage(entitlementId, role, content) {
@@ -431,7 +455,7 @@ async function saveChatMessage(entitlementId, role, content) {
 async function getChatHistory(entitlementId, limit = 20) {
   const db = await getDb();
   if (!db) return [];
-  const rows = await db.select().from(chatMessages).where(eq(chatMessages.entitlementId, entitlementId)).orderBy(desc(chatMessages.createdAt)).limit(limit);
+  const rows = await db.select().from(chatMessages).where((0, import_drizzle_orm.eq)(chatMessages.entitlementId, entitlementId)).orderBy((0, import_drizzle_orm.desc)(chatMessages.createdAt)).limit(limit);
   return rows.reverse();
 }
 
@@ -481,9 +505,9 @@ var HttpError = class extends Error {
 var ForbiddenError = (msg) => new HttpError(403, msg);
 
 // server/_core/sdk.ts
-import axios from "axios";
-import { parse as parseCookieHeader } from "cookie";
-import { SignJWT, jwtVerify } from "jose";
+var import_axios = __toESM(require("axios"));
+var import_cookie = require("cookie");
+var import_jose = require("jose");
 var isNonEmptyString = (value) => typeof value === "string" && value.length > 0;
 var EXCHANGE_TOKEN_PATH = `/webdev.v1.WebDevAuthPublicService/ExchangeToken`;
 var GET_USER_INFO_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserInfo`;
@@ -519,7 +543,7 @@ var OAuthService = class {
     return data;
   }
 };
-var createOAuthHttpClient = () => axios.create({
+var createOAuthHttpClient = () => import_axios.default.create({
   baseURL: ENV.oAuthServerUrl,
   timeout: AXIOS_TIMEOUT_MS
 });
@@ -574,7 +598,7 @@ var SDKServer = class {
     if (!cookieHeader) {
       return /* @__PURE__ */ new Map();
     }
-    const parsed = parseCookieHeader(cookieHeader);
+    const parsed = (0, import_cookie.parse)(cookieHeader);
     return new Map(Object.entries(parsed));
   }
   getSessionSecret() {
@@ -601,7 +625,7 @@ var SDKServer = class {
     const expiresInMs = options.expiresInMs ?? ONE_YEAR_MS;
     const expirationSeconds = Math.floor((issuedAt + expiresInMs) / 1e3);
     const secretKey = this.getSessionSecret();
-    return new SignJWT({
+    return new import_jose.SignJWT({
       openId: payload.openId,
       appId: payload.appId,
       name: payload.name
@@ -614,7 +638,7 @@ var SDKServer = class {
     }
     try {
       const secretKey = this.getSessionSecret();
-      const { payload } = await jwtVerify(cookieValue, secretKey, {
+      const { payload } = await (0, import_jose.jwtVerify)(cookieValue, secretKey, {
         algorithms: ["HS256"]
       });
       const { openId, appId, name } = payload;
@@ -815,13 +839,13 @@ function registerOAuthRoutes(app) {
 }
 
 // server/routers.ts
-import { z as z2 } from "zod";
+var import_zod2 = require("zod");
 
 // server/_core/systemRouter.ts
-import { z } from "zod";
+var import_zod = require("zod");
 
 // server/_core/notification.ts
-import { TRPCError } from "@trpc/server";
+var import_server = require("@trpc/server");
 var TITLE_MAX_LENGTH = 1200;
 var CONTENT_MAX_LENGTH = 2e4;
 var trimValue = (value) => value.trim();
@@ -832,13 +856,13 @@ var buildEndpointUrl = (baseUrl) => {
 };
 var validatePayload = (input) => {
   if (!isNonEmptyString2(input.title)) {
-    throw new TRPCError({
+    throw new import_server.TRPCError({
       code: "BAD_REQUEST",
       message: "Notification title is required."
     });
   }
   if (!isNonEmptyString2(input.content)) {
-    throw new TRPCError({
+    throw new import_server.TRPCError({
       code: "BAD_REQUEST",
       message: "Notification content is required."
     });
@@ -846,13 +870,13 @@ var validatePayload = (input) => {
   const title = trimValue(input.title);
   const content = trimValue(input.content);
   if (title.length > TITLE_MAX_LENGTH) {
-    throw new TRPCError({
+    throw new import_server.TRPCError({
       code: "BAD_REQUEST",
       message: `Notification title must be at most ${TITLE_MAX_LENGTH} characters.`
     });
   }
   if (content.length > CONTENT_MAX_LENGTH) {
-    throw new TRPCError({
+    throw new import_server.TRPCError({
       code: "BAD_REQUEST",
       message: `Notification content must be at most ${CONTENT_MAX_LENGTH} characters.`
     });
@@ -862,13 +886,13 @@ var validatePayload = (input) => {
 async function notifyOwner(payload) {
   const { title, content } = validatePayload(payload);
   if (!ENV.forgeApiUrl) {
-    throw new TRPCError({
+    throw new import_server.TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "Notification service URL is not configured."
     });
   }
   if (!ENV.forgeApiKey) {
-    throw new TRPCError({
+    throw new import_server.TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "Notification service API key is not configured."
     });
@@ -900,17 +924,17 @@ async function notifyOwner(payload) {
 }
 
 // server/_core/trpc.ts
-import { initTRPC, TRPCError as TRPCError2 } from "@trpc/server";
-import superjson from "superjson";
-var t = initTRPC.context().create({
-  transformer: superjson
+var import_server2 = require("@trpc/server");
+var import_superjson = __toESM(require("superjson"));
+var t = import_server2.initTRPC.context().create({
+  transformer: import_superjson.default
 });
 var router = t.router;
 var publicProcedure = t.procedure;
 var requireUser = t.middleware(async (opts) => {
   const { ctx, next } = opts;
   if (!ctx.user) {
-    throw new TRPCError2({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+    throw new import_server2.TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
   }
   return next({
     ctx: {
@@ -924,7 +948,7 @@ var adminProcedure = t.procedure.use(
   t.middleware(async (opts) => {
     const { ctx, next } = opts;
     if (!ctx.user || ctx.user.role !== "admin") {
-      throw new TRPCError2({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
+      throw new import_server2.TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
     }
     return next({
       ctx: {
@@ -938,16 +962,16 @@ var adminProcedure = t.procedure.use(
 // server/_core/systemRouter.ts
 var systemRouter = router({
   health: publicProcedure.input(
-    z.object({
-      timestamp: z.number().min(0, "timestamp cannot be negative")
+    import_zod.z.object({
+      timestamp: import_zod.z.number().min(0, "timestamp cannot be negative")
     })
   ).query(() => ({
     ok: true
   })),
   notifyOwner: adminProcedure.input(
-    z.object({
-      title: z.string().min(1, "title is required"),
-      content: z.string().min(1, "content is required")
+    import_zod.z.object({
+      title: import_zod.z.string().min(1, "title is required"),
+      content: import_zod.z.string().min(1, "content is required")
     })
   ).mutation(async ({ input }) => {
     const delivered = await notifyOwner(input);
@@ -981,9 +1005,9 @@ var appRouter = router({
      * Returns the client secret needed by the frontend to confirm payment.
      */
     createPaymentIntent: publicProcedure.input(
-      z2.object({
-        productTier: z2.enum(["basic", "premium"]),
-        email: z2.string().email()
+      import_zod2.z.object({
+        productTier: import_zod2.z.enum(["basic", "premium"]),
+        email: import_zod2.z.string().email()
       })
     ).mutation(async ({ ctx, input }) => {
       const PRICES = { basic: 1999, premium: 3999 };
@@ -1029,9 +1053,9 @@ var appRouter = router({
      * 5-day review follow-up email.
      */
     confirmPayment: publicProcedure.input(
-      z2.object({
-        orderId: z2.number(),
-        stripePaymentIntentId: z2.string().optional()
+      import_zod2.z.object({
+        orderId: import_zod2.z.number(),
+        stripePaymentIntentId: import_zod2.z.string().optional()
       })
     ).mutation(async ({ input }) => {
       const order = await getOrderById(input.orderId);
@@ -1086,7 +1110,7 @@ var appRouter = router({
      * Get order by ID (public — used after purchase to show confirmation).
      * Returns the guestReviewToken so the app can open the review modal.
      */
-    getOrder: publicProcedure.input(z2.object({ orderId: z2.number() })).query(async ({ input }) => {
+    getOrder: publicProcedure.input(import_zod2.z.object({ orderId: import_zod2.z.number() })).query(async ({ input }) => {
       const order = await getOrderById(input.orderId);
       if (!order) return null;
       return order;
@@ -1100,13 +1124,13 @@ var appRouter = router({
      * Works for all SKUs.
      */
     submit: publicProcedure.input(
-      z2.object({
-        orderId: z2.number(),
-        guestReviewToken: z2.string(),
-        rating: z2.number().int().min(1).max(5),
-        title: z2.string().max(120).optional(),
-        body: z2.string().max(2e3).optional(),
-        displayName: z2.string().max(100).optional()
+      import_zod2.z.object({
+        orderId: import_zod2.z.number(),
+        guestReviewToken: import_zod2.z.string(),
+        rating: import_zod2.z.number().int().min(1).max(5),
+        title: import_zod2.z.string().max(120).optional(),
+        body: import_zod2.z.string().max(2e3).optional(),
+        displayName: import_zod2.z.string().max(100).optional()
       })
     ).mutation(async ({ input }) => {
       const order = await verifyOrderReviewToken(input.orderId, input.guestReviewToken);
@@ -1138,7 +1162,7 @@ var appRouter = router({
     /**
      * Delete a review by orderId + guestReviewToken (no auth required).
      */
-    delete: publicProcedure.input(z2.object({ reviewId: z2.number(), orderId: z2.number(), guestReviewToken: z2.string() })).mutation(async ({ input }) => {
+    delete: publicProcedure.input(import_zod2.z.object({ reviewId: import_zod2.z.number(), orderId: import_zod2.z.number(), guestReviewToken: import_zod2.z.string() })).mutation(async ({ input }) => {
       const order = await verifyOrderReviewToken(input.orderId, input.guestReviewToken);
       if (!order) throw new Error("Invalid order or review token.");
       await deleteReview(input.reviewId, input.orderId);
@@ -1148,10 +1172,10 @@ var appRouter = router({
      * List published reviews for a product tier (public).
      */
     list: publicProcedure.input(
-      z2.object({
-        productTier: z2.enum(["basic", "premium"]),
-        limit: z2.number().int().min(1).max(50).default(10),
-        offset: z2.number().int().min(0).default(0)
+      import_zod2.z.object({
+        productTier: import_zod2.z.enum(["basic", "premium"]),
+        limit: import_zod2.z.number().int().min(1).max(50).default(10),
+        offset: import_zod2.z.number().int().min(0).default(0)
       })
     ).query(async ({ input }) => {
       return getReviewsByProductTier(input.productTier, input.limit, input.offset);
@@ -1159,14 +1183,14 @@ var appRouter = router({
     /**
      * Get rating stats (average, count, distribution) for a product tier.
      */
-    stats: publicProcedure.input(z2.object({ productTier: z2.enum(["basic", "premium"]) })).query(async ({ input }) => {
+    stats: publicProcedure.input(import_zod2.z.object({ productTier: import_zod2.z.enum(["basic", "premium"]) })).query(async ({ input }) => {
       return getRatingStats(input.productTier);
     }),
     /**
      * Get the review for a specific order (by orderId + guestReviewToken).
      * No auth required.
      */
-    myReview: publicProcedure.input(z2.object({ orderId: z2.number(), guestReviewToken: z2.string() })).query(async ({ input }) => {
+    myReview: publicProcedure.input(import_zod2.z.object({ orderId: import_zod2.z.number(), guestReviewToken: import_zod2.z.string() })).query(async ({ input }) => {
       const order = await verifyOrderReviewToken(input.orderId, input.guestReviewToken);
       if (!order) return null;
       return getReviewByOrderId(input.orderId);
@@ -1177,7 +1201,7 @@ var appRouter = router({
     /**
      * Get all downloads for a specific order (by orderId).
      */
-    forOrder: publicProcedure.input(z2.object({ orderId: z2.number() })).query(async ({ input }) => {
+    forOrder: publicProcedure.input(import_zod2.z.object({ orderId: import_zod2.z.number() })).query(async ({ input }) => {
       const order = await getOrderById(input.orderId);
       if (!order || order.status !== "paid") return [];
       return getDownloadsByOrderId(input.orderId);
@@ -1186,7 +1210,7 @@ var appRouter = router({
      * Get downloads for a list of orderIds (guest access — no auth required).
      * Used by the Downloads tab when the customer hasn't signed in.
      */
-    forOrders: publicProcedure.input(z2.object({ orderIds: z2.array(z2.number()).max(10) })).query(async ({ input }) => {
+    forOrders: publicProcedure.input(import_zod2.z.object({ orderIds: import_zod2.z.array(import_zod2.z.number()).max(10) })).query(async ({ input }) => {
       if (input.orderIds.length === 0) return [];
       const results = await Promise.all(
         input.orderIds.map(async (orderId) => {
@@ -1204,7 +1228,7 @@ var appRouter = router({
      * This is the unified cross-device recovery endpoint used by both the Downloads tab
      * and the Captain Bob gate screen.
      */
-    recoverPurchase: publicProcedure.input(z2.object({ orderId: z2.number(), email: z2.string().email() })).mutation(async ({ input }) => {
+    recoverPurchase: publicProcedure.input(import_zod2.z.object({ orderId: import_zod2.z.number(), email: import_zod2.z.string().email() })).mutation(async ({ input }) => {
       const order = await getOrderById(input.orderId);
       if (!order) throw new Error("Order not found. Please check your order number.");
       if (order.status !== "paid") throw new Error("This order has not been completed.");
@@ -1233,7 +1257,7 @@ var appRouter = router({
     /**
      * Resolve a download token to a file URL.
      */
-    resolveToken: publicProcedure.input(z2.object({ token: z2.string() })).query(async ({ input }) => {
+    resolveToken: publicProcedure.input(import_zod2.z.object({ token: import_zod2.z.string() })).query(async ({ input }) => {
       const download = await getDownloadByToken(input.token);
       if (!download) throw new Error("Invalid download token");
       if (download.expiresAt && /* @__PURE__ */ new Date() > download.expiresAt) {
@@ -1258,7 +1282,7 @@ var appRouter = router({
      * Get the chat entitlement status for a Premium order.
      * Returns days remaining, messages remaining, and active status.
      */
-    getEntitlement: publicProcedure.input(z2.object({ orderId: z2.number(), chatToken: z2.string() })).query(async ({ input }) => {
+    getEntitlement: publicProcedure.input(import_zod2.z.object({ orderId: import_zod2.z.number(), chatToken: import_zod2.z.string() })).query(async ({ input }) => {
       const entitlement = await getEntitlementByToken(input.chatToken);
       if (!entitlement || entitlement.orderId !== input.orderId) return null;
       const now = /* @__PURE__ */ new Date();
@@ -1283,7 +1307,7 @@ var appRouter = router({
     /**
      * Get the last 50 messages for a chat session.
      */
-    getHistory: publicProcedure.input(z2.object({ orderId: z2.number(), chatToken: z2.string() })).query(async ({ input }) => {
+    getHistory: publicProcedure.input(import_zod2.z.object({ orderId: import_zod2.z.number(), chatToken: import_zod2.z.string() })).query(async ({ input }) => {
       const entitlement = await getEntitlementByToken(input.chatToken);
       if (!entitlement || entitlement.orderId !== input.orderId) return [];
       return getChatHistory(entitlement.id, 50);
@@ -1293,10 +1317,10 @@ var appRouter = router({
      * Enforces message cap and expiry window.
      */
     sendMessage: publicProcedure.input(
-      z2.object({
-        orderId: z2.number(),
-        chatToken: z2.string(),
-        message: z2.string().min(1).max(1e3)
+      import_zod2.z.object({
+        orderId: import_zod2.z.number(),
+        chatToken: import_zod2.z.string(),
+        message: import_zod2.z.string().min(1).max(1e3)
       })
     ).mutation(async ({ input }) => {
       const entitlement = await getEntitlementByToken(input.chatToken);
@@ -1328,7 +1352,7 @@ var appRouter = router({
      * Purchase a 30-day extension for $9.99.
      * Creates a Stripe PaymentIntent for the extension SKU.
      */
-    createExtensionIntent: publicProcedure.input(z2.object({ orderId: z2.number(), chatToken: z2.string(), email: z2.string().email() })).mutation(async ({ input }) => {
+    createExtensionIntent: publicProcedure.input(import_zod2.z.object({ orderId: import_zod2.z.number(), chatToken: import_zod2.z.string(), email: import_zod2.z.string().email() })).mutation(async ({ input }) => {
       const entitlement = await getEntitlementByToken(input.chatToken);
       if (!entitlement || entitlement.orderId !== input.orderId) {
         throw new Error("Invalid chat token.");
@@ -1389,7 +1413,7 @@ var appRouter = router({
      * Rate-limited by checking order status only — no brute-force risk since orderId + email
      * must both match exactly.
      */
-    restoreChatAccess: publicProcedure.input(z2.object({ orderId: z2.number(), email: z2.string().email() })).mutation(async ({ input }) => {
+    restoreChatAccess: publicProcedure.input(import_zod2.z.object({ orderId: import_zod2.z.number(), email: import_zod2.z.string().email() })).mutation(async ({ input }) => {
       const order = await getOrderById(input.orderId);
       if (!order) throw new Error("Order not found. Please check your order number.");
       if (order.status !== "paid") throw new Error("This order has not been completed.");
@@ -1406,10 +1430,10 @@ var appRouter = router({
       };
     }),
     confirmExtension: publicProcedure.input(
-      z2.object({
-        orderId: z2.number(),
-        chatToken: z2.string(),
-        stripePaymentIntentId: z2.string().optional()
+      import_zod2.z.object({
+        orderId: import_zod2.z.number(),
+        chatToken: import_zod2.z.string(),
+        stripePaymentIntentId: import_zod2.z.string().optional()
       })
     ).mutation(async ({ input }) => {
       const entitlement = await getEntitlementByToken(input.chatToken);
@@ -1968,7 +1992,7 @@ async function handleStripeWebhook(req, res) {
 // server/_core/index.ts
 function isPortAvailable(port) {
   return new Promise((resolve) => {
-    const server = net.createServer();
+    const server = import_net.default.createServer();
     server.listen(port, () => {
       server.close(() => resolve(true));
     });
@@ -1984,8 +2008,8 @@ async function findAvailablePort(startPort = 3e3) {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 async function startServer() {
-  const app = express();
-  const server = createServer(app);
+  const app = (0, import_express.default)();
+  const server = (0, import_http.createServer)(app);
   app.use((req, res, next) => {
     const origin = req.headers.origin;
     if (origin) {
@@ -2005,36 +2029,36 @@ async function startServer() {
   });
   app.post(
     "/webhook",
-    express.raw({ type: "application/json" }),
+    import_express.default.raw({ type: "application/json" }),
     handleStripeWebhook
   );
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.use(import_express.default.json({ limit: "50mb" }));
+  app.use(import_express.default.urlencoded({ limit: "50mb", extended: true }));
   registerOAuthRoutes(app);
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: Date.now() });
   });
   app.use(
     "/api/trpc",
-    createExpressMiddleware({
+    (0, import_express2.createExpressMiddleware)({
       router: appRouter,
       createContext
     })
   );
   const { existsSync } = await import("fs");
   const webBuildCandidates = [
-    path.join(process.cwd(), "web-build"),
-    path.join(process.cwd(), "..", "web-build"),
+    import_path.default.join(process.cwd(), "web-build"),
+    import_path.default.join(process.cwd(), "..", "web-build"),
     "/usr/src/app/web-build",
     "/app/web-build"
   ];
   const webBuildPath = webBuildCandidates.find((p) => existsSync(p)) ?? webBuildCandidates[0];
   console.log(`[web] cwd=${process.cwd()} | web-build path=${webBuildPath} | exists=${existsSync(webBuildPath)}`);
   if (existsSync(webBuildPath)) {
-    app.use(express.static(webBuildPath));
+    app.use(import_express.default.static(webBuildPath));
     app.get("*", (req, res) => {
       if (!req.path.startsWith("/api") && !req.path.startsWith("/webhook")) {
-        res.sendFile(path.join(webBuildPath, "index.html"));
+        res.sendFile(import_path.default.join(webBuildPath, "index.html"));
       } else {
         res.status(404).json({ error: "Not found" });
       }
