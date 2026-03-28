@@ -1,0 +1,13 @@
+# Exclude everything by default
+*
+*/
+
+# But include these critical directories
+!dist/
+!web-dist/
+!node_modules/
+!package.json
+!pnpm-lock.yaml
+!.env
+!.env.production
+!.env.local
