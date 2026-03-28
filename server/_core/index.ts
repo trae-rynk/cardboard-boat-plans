@@ -82,10 +82,10 @@ async function startServer() {
   // Try multiple candidate paths to handle different Docker working directories
   const { existsSync } = await import("fs");
   const webBuildCandidates = [
-    path.join(process.cwd(), "web-build"),
-    path.join(process.cwd(), "..", "web-build"),
-    "/usr/src/app/web-build",
-    "/app/web-build",
+    path.join(process.cwd(), "web-dist"),
+    path.join(process.cwd(), "..", "web-dist"),
+    "/usr/src/app/web-dist",
+    "/app/web-dist",
   ];
   const webBuildPath = webBuildCandidates.find(p => existsSync(p)) ?? webBuildCandidates[0];
   console.log(`[web] cwd=${process.cwd()} | web-build path=${webBuildPath} | exists=${existsSync(webBuildPath)}`);
