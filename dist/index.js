@@ -2047,10 +2047,10 @@ async function startServer() {
   );
   const { existsSync } = await import("fs");
   const webBuildCandidates = [
-    import_path.default.join(process.cwd(), "web-build"),
-    import_path.default.join(process.cwd(), "..", "web-build"),
-    "/usr/src/app/web-build",
-    "/app/web-build"
+    import_path.default.join(process.cwd(), "web-dist"),
+    import_path.default.join(process.cwd(), "..", "web-dist"),
+    "/usr/src/app/web-dist",
+    "/app/web-dist"
   ];
   const webBuildPath = webBuildCandidates.find((p) => existsSync(p)) ?? webBuildCandidates[0];
   console.log(`[web] cwd=${process.cwd()} | web-build path=${webBuildPath} | exists=${existsSync(webBuildPath)}`);
