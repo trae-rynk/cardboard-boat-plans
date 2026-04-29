@@ -18,7 +18,7 @@
     "ios": "expo start --ios",
     "qr": "node scripts/generate_qr.mjs",
     "build:server": "esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=cjs --outdir=dist",
-    "build:web": "expo export --platform web --output-dir web-dist",
+    "build:web": "rm -rf node_modules/react-native-css-interop/.cache && expo export --platform web --output-dir web-dist",
 
     "postinstall": "echo 'Skipping postinstall - build happens during pnpm run build'"
   },
