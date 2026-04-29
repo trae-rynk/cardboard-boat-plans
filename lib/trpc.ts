@@ -17,12 +17,21 @@ export const trpc = createTRPCReact<AppRouter>();
 /**
  * Creates the tRPC client with proper configuration.
  * Call this once in your app's root layout.
+ *
+ * The `url` is provided as a function so it is evaluated fresh on every
+ * request at runtime — not once at build/module-load time. This prevents
+ * a stale dev-server origin (baked in at compile time) from being used
+ * when the app is deployed on Railway, where `window.location.origin`
+ * correctly reflects the live domain.
  */
 export function createTRPCClient() {
   return trpc.createClient({
     links: [
       httpBatchLink({
-        url: `${getApiBaseUrl()}/api/trpc`,
+        // Returning a function here makes tRPC call it per-request, so
+        // `getApiBaseUrl()` (and therefore `window.location.origin`) is
+        // read at request time rather than at client-creation time.
+        url: () => `${getApiBaseUrl()}/api/trpc`,
         // tRPC v11: transformer MUST be inside httpBatchLink, not at root
         transformer: superjson,
         async headers() {
