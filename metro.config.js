@@ -17,25 +17,29 @@ const config = getDefaultConfig(__dirname);
 // (configured in app.config.ts) compiles the real native modules into the binary,
 // so Stripe works fully in the production APK/IPA.
 const stripeStub = path.resolve(__dirname, "lib/stripe-web-stub.ts");
+const cssInteropStub = path.resolve(
+  __dirname,
+  "lib/react-native-css-interop-stub.ts"
+);
 const originalResolver = config.resolver?.resolveRequest;
 config.resolver = config.resolver ?? {};
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName === "@stripe/stripe-react-native") {
     return { filePath: stripeStub, type: "sourceFile" };
   }
+  // react-native-css-interop is a native-only styling package used by NativeWind
+  // to apply Tailwind classes in React Native. On web, NativeWind uses standard
+  // CSS and never needs this package. Stubbing it out prevents Metro from trying
+  // to bundle the real package (which references native modules and a build-time
+  // cache file that doesn't exist during the web export).
+  if (moduleName === "react-native-css-interop" && platform === "web") {
+    return { filePath: cssInteropStub, type: "sourceFile" };
+  }
   if (originalResolver) {
     return originalResolver(context, moduleName, platform);
   }
   return context.resolveRequest(context, moduleName, platform);
 };
-
-// Prevent Metro from processing the react-native-css-interop cache directory.
-// The cache file (web.css) is regenerated during the build itself, so removing
-// it beforehand doesn't help — Metro encounters it mid-run and fails to hash it.
-// Adding it to blockList tells Metro to skip the directory entirely.
-config.resolver.blockList = [
-  /node_modules\/react-native-css-interop\/\.cache\/.*/,
-];
 
 module.exports = withNativeWind(config, {
   input: "./global.css",
