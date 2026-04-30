@@ -41,20 +41,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     applyScheme(colorScheme);
   }, [applyScheme, colorScheme]);
 
-  const themeVariables = useMemo(
-    () => ({
-      "--color-primary": SchemeColors[colorScheme].primary,
-      "--color-background": SchemeColors[colorScheme].background,
-      "--color-surface": SchemeColors[colorScheme].surface,
-      "--color-foreground": SchemeColors[colorScheme].foreground,
-      "--color-muted": SchemeColors[colorScheme].muted,
-      "--color-border": SchemeColors[colorScheme].border,
-      "--color-success": SchemeColors[colorScheme].success,
-      "--color-warning": SchemeColors[colorScheme].warning,
-      "--color-error": SchemeColors[colorScheme].error,
-    }),
-    [colorScheme],
-  );
+  
 
   const value = useMemo(
     () => ({
@@ -66,7 +53,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={value}>
-      <View style={[{ flex: 1 }, themeVariables as any]}>{children}</View>
+     <View style={{ flex: 1 }}>{children}</View>
     </ThemeContext.Provider>
   );
 }
