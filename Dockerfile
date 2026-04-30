@@ -33,29 +33,34 @@ RUN pnpm install --frozen-lockfile --prod=false
 COPY . .
 
 # Build application
-RUN echo "Build NODE_ENV=$NODE_ENV" && \
-    echo "=== package.json scripts ===" && \
-    node -e "console.log(require('./package.json').scripts)" && \
-    echo "=== search source for nativewind/css-interop ===" && \
+RUN echo "Build NODE_ENV=$NODE_ENV"
+
+RUN echo "=== package.json scripts ===" && \
+    node -e "console.log(require('./package.json').scripts)"
+
+RUN echo "=== search source for nativewind/css-interop ===" && \
     grep -R "react-native-css-interop\|nativewind" . \
       --exclude-dir=node_modules \
       --exclude-dir=.git \
       --exclude-dir=web-dist \
       --exclude-dir=dist \
-      || true && \
-    echo "=== pnpm why react-native-css-interop ===" && \
-    pnpm why react-native-css-interop || true && \
-    echo "=== pnpm list react-native-css-interop ===" && \
-    pnpm list react-native-css-interop --depth 20 || true && \
-    echo "=== does node_modules/react-native-css-interop exist? ===" && \
+      || true
+
+RUN echo "=== pnpm why react-native-css-interop ===" && \
+    pnpm why react-native-css-interop || true
+
+RUN echo "=== pnpm list react-native-css-interop ===" && \
+    pnpm list react-native-css-interop --depth 20 || true
+
+RUN echo "=== does node_modules/react-native-css-interop exist? ===" && \
     if [ -d node_modules/react-native-css-interop ]; then \
       echo "FOUND react-native-css-interop"; \
       cat node_modules/react-native-css-interop/package.json; \
     else \
       echo "NOT FOUND react-native-css-interop"; \
-    fi && \
-    echo "=== now running build ===" && \
-    pnpm run build
+    fi
+
+RUN echo "=== now running build ===" && pnpm run build
 
 # Remove development dependencies
 RUN pnpm prune --prod
