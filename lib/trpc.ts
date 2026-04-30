@@ -31,7 +31,7 @@ export function createTRPCClient() {
         // Returning a function here makes tRPC call it per-request, so
         // `getApiBaseUrl()` (and therefore `window.location.origin`) is
         // read at request time rather than at client-creation time.
-        url: () => `${getApiBaseUrl()}/api/trpc`,
+        url: "/api/trpc",
         // tRPC v11: transformer MUST be inside httpBatchLink, not at root
         transformer: superjson,
         async headers() {
