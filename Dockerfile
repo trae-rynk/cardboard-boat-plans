@@ -62,6 +62,8 @@ RUN echo "=== does node_modules/react-native-css-interop exist? ===" && \
 
 RUN node -e "console.log('Stripe public key present:', Boolean(process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY), 'prefix:', (process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '').slice(0, 3))"    
 
+RUN node -e "console.log('All EXPO_PUBLIC vars:', Object.keys(process.env).filter(k => k.startsWith('EXPO_PUBLIC_')))"
+
 RUN echo "=== now running build ===" && pnpm run build
 
 # Remove development dependencies
