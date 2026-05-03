@@ -60,6 +60,8 @@ RUN echo "=== does node_modules/react-native-css-interop exist? ===" && \
       echo "NOT FOUND react-native-css-interop"; \
     fi
 
+RUN node -e "console.log('Stripe public key present:', Boolean(process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY), 'prefix:', (process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '').slice(0, 3))"    
+
 RUN echo "=== now running build ===" && pnpm run build
 
 # Remove development dependencies
