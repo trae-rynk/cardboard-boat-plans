@@ -105,7 +105,7 @@ export default function ProductDetailScreen() {
                     styles.featureRow,
                     isLiveSupport && tier === 'premium' && [
                       styles.featureRowHighlight,
-                      { backgroundColor: '#FFF7E6', borderColor: '#F4A020' },
+                      { backgroundColor: '#1B4F8A', borderColor: '#F4A020' },
                     ],
                   ]}
                 >
