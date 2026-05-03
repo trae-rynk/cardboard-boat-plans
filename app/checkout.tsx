@@ -103,23 +103,8 @@ export default function CheckoutScreen() {
       });
 
       if (!intentResult.clientSecret || !intentResult.stripeConfigured) {
-        // Demo / Stripe not configured — confirm directly
-        const confirmation = await confirmPayment.mutateAsync({
-          orderId: intentResult.orderId,
-        });
-        if (Platform.OS !== 'web') {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
-        router.replace({
-          pathname: '/purchase-success',
-          params: {
-            orderId: String(confirmation.orderId),
-            productTier: confirmation.productTier,
-            chatToken: confirmation.chatToken ?? '',
-          },
-        });
-        return;
-      }
+  throw new Error('Payment system is not configured. Please contact support.');
+}
 
       if (Platform.OS === 'web') {
         // Web: store clientSecret and show Stripe Elements form
