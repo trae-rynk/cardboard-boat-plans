@@ -68,6 +68,8 @@ RUN node -e "console.log('Stripe public key present:', Boolean(process.env.EXPO_
 
 RUN node -e "console.log('All EXPO_PUBLIC vars:', Object.keys(process.env).filter(k => k.startsWith('EXPO_PUBLIC_')))"
 
+RUN node -e "console.log('Stripe secret key present at build:', Boolean(process.env.STRIPE_SECRET_KEY), 'prefix:', (process.env.STRIPE_SECRET_KEY || '').slice(0, 3))"
+
 RUN echo "=== now running build ===" && pnpm run build
 
 # Remove development dependencies
