@@ -100,6 +100,10 @@ export const appRouter = router({
           clientSecret,
           stripePaymentIntentId,
           amountCents,
+          originalAmountCents,
+          discountPercent: discountPercent ?? 0,
+          promoCode: normalizedPromoCode ?? null,
+          finalAmountCents: amountCents,
           stripeConfigured: !!process.env.STRIPE_SECRET_KEY,
         };
       }),

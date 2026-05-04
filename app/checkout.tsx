@@ -53,6 +53,11 @@ export default function CheckoutScreen() {
   const [email, setEmail] = useState('');
   const [promoCode, setPromoCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [appliedDiscountPercent, setAppliedDiscountPercent] = useState(0);
+  const [finalAmountCents, setFinalAmountCents] = useState<number | null>(null);
+
+  const displayAmountCents = finalAmountCents ?? product.price;
+  const displayPrice = `$${(displayAmountCents / 100).toFixed(2)}`; 
 
   // Web-specific state: after createPaymentIntent, show the Stripe Elements form
   const [webClientSecret, setWebClientSecret] = useState<string | null>(null);
@@ -99,10 +104,13 @@ export default function CheckoutScreen() {
     try {
       // Step 1: Create PaymentIntent on server
     const intentResult = await createPaymentIntent.mutateAsync({
-  productTier: product.id,
-  email: email.trim(),
-  promoCode: promoCode.trim() || undefined,
-});  
+      productTier: product.id,
+      email: email.trim(),
+      promoCode: promoCode.trim() || undefined,
+    });
+
+    setAppliedDiscountPercent(intentResult.discountPercent ?? 0);
+    setFinalAmountCents(intentResult.finalAmountCents ?? intentResult.amountCents ?? product.price);
 
       if (!intentResult.clientSecret || !intentResult.stripeConfigured) {
   throw new Error('Payment system is not configured. Please contact support.');
@@ -215,12 +223,12 @@ export default function CheckoutScreen() {
                 <Text style={[styles.orderName, { color: colors.foreground }]}>{product.name}</Text>
                 <Text style={[styles.orderTagline, { color: colors.muted }]}>{product.tagline}</Text>
               </View>
-              <Text style={[styles.orderPrice, { color: accentColor }]}>{product.priceDisplay}</Text>
+              <Text style={[styles.orderPrice, { color: accentColor }]}>{displayPrice}</Text>
             </View>
             <View style={[styles.orderDivider, { backgroundColor: accentColor + '33' }]} />
             <View style={styles.orderRow}>
               <Text style={[styles.orderTotalLabel, { color: colors.foreground }]}>Total</Text>
-              <Text style={[styles.orderTotalPrice, { color: accentColor }]}>{product.priceDisplay}</Text>
+              <Text style={[styles.orderTotalPrice, { color: accentColor }]}>{displayPrice}</Text>
             </View>
           </View>
 
@@ -283,6 +291,13 @@ export default function CheckoutScreen() {
                   autoCapitalize="none"
                   colors={colors}
                 />
+
+                {appliedDiscountPercent > 0 && (
+                  <Text style={{ color: colors.success, fontSize: 13, marginTop: -6, marginBottom: 10 }}>
+                    Promo code applied: {appliedDiscountPercent}% off
+                  </Text>
+                )}
+                
               </View>
 
               {/* Payment method info */}
@@ -347,7 +362,7 @@ export default function CheckoutScreen() {
               <>
                 <IconSymbol name="lock.fill" size={18} color="#FFFFFF" />
                 <Text style={styles.payButtonText}>
-                  Pay {product.priceDisplay} Now
+                  Pay {displayPrice} Now
                 </Text>
               </>
             )}
