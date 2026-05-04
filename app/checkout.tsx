@@ -51,6 +51,7 @@ export default function CheckoutScreen() {
   const isDesktop = Platform.OS === 'web' && width >= 768;
 
   const [email, setEmail] = useState('');
+  const [promoCode, setPromoCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Web-specific state: after createPaymentIntent, show the Stripe Elements form
@@ -97,10 +98,11 @@ export default function CheckoutScreen() {
     setWebError(null);
     try {
       // Step 1: Create PaymentIntent on server
-      const intentResult = await createPaymentIntent.mutateAsync({
-        productTier: product.id,
-        email: email.trim(),
-      });
+    const intentResult = await createPaymentIntent.mutateAsync({
+  productTier: product.id,
+  email: email.trim(),
+  promoCode: promoCode.trim() || undefined,
+});  
 
       if (!intentResult.clientSecret || !intentResult.stripeConfigured) {
   throw new Error('Payment system is not configured. Please contact support.');
@@ -270,6 +272,14 @@ export default function CheckoutScreen() {
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
+                  autoCapitalize="none"
+                  colors={colors}
+                />
+                <FormField
+                  label="Promo Code"
+                  placeholder="Optional"
+                  value={promoCode}
+                  onChangeText={setPromoCode}
                   autoCapitalize="none"
                   colors={colors}
                 />

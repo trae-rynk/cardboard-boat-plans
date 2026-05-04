@@ -30,16 +30,33 @@ export const appRouter = router({
      * Create a Stripe PaymentIntent and a pending order record.
      * Returns the client secret needed by the frontend to confirm payment.
      */
-    createPaymentIntent: publicProcedure
+        createPaymentIntent: publicProcedure
       .input(
         z.object({
           productTier: z.enum(["basic", "premium"]),
           email: z.string().email(),
+          promoCode: z.string().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
         const PRICES = { basic: 1999, premium: 3999 };
-        const amountCents = PRICES[input.productTier];
+        const PROMO_CODES: Record<string, number> = {
+          FAWNLAKE: 25,
+        };
+
+        const originalAmountCents = PRICES[input.productTier];
+        const normalizedPromoCode = input.promoCode?.trim().toUpperCase();
+        const discountPercent = normalizedPromoCode
+          ? PROMO_CODES[normalizedPromoCode]
+          : undefined;
+
+        if (normalizedPromoCode && !discountPercent) {
+          throw new Error("Invalid promo code.");
+        }
+
+        const amountCents = discountPercent
+          ? Math.round(originalAmountCents * (1 - discountPercent / 100))
+          : originalAmountCents;
 
         // Create Stripe PaymentIntent
         let clientSecret: string | null = null;
@@ -52,9 +69,13 @@ export const appRouter = router({
             currency: "usd",
             receipt_email: input.email,
             metadata: {
-              productTier: input.productTier,
-              email: input.email,
-            },
+  productTier: input.productTier,
+  email: input.email,
+  promoCode: normalizedPromoCode ?? "",
+  discountPercent: discountPercent ? String(discountPercent) : "0",
+  originalAmountCents: String(originalAmountCents),
+  finalAmountCents: String(amountCents),
+}, 
           });
           clientSecret = intent.client_secret;
           stripePaymentIntentId = intent.id;
